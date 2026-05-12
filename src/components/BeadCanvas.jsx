@@ -5,10 +5,7 @@ export default function BeadCanvas({
   cellSize,
   showGrid,
   activeTool,
-  selectedColor,
   onCellAction,
-  onZoom,
-  symmetry,
 }) {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);

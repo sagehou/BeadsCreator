@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { PERLER_COLORS, HAMA_COLORS } from '../data/colors';
 
+const PALETTE_COLORS = [...PERLER_COLORS, ...HAMA_COLORS];
+
 export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [dragOver, setDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -9,8 +11,6 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [maxColors, setMaxColors] = useState(16);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
-
-  const paletteColors = [...PERLER_COLORS, ...HAMA_COLORS];
 
   const processImage = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -53,7 +53,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
             const row = [];
             for (let x = 0; x < msg.width; x++) {
               const idx = msg.result[y * msg.width + x];
-              row.push(paletteColors[idx].hex);
+              row.push(PALETTE_COLORS[idx].hex);
             }
             newGrid.push(row);
           }
@@ -72,14 +72,14 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         imageData: imageData.data,
         width: gridCols,
         height: gridRows,
-        paletteHexColors: paletteColors.map(c => c.hex),
+        paletteHexColors: PALETTE_COLORS.map(c => c.hex),
         maxColors: maxColors,
         enhanceEdges: enhanceEdges,
       });
     };
 
     img.src = url;
-  }, [gridRows, gridCols, maxColors, enhanceEdges, onConvert, paletteColors]);
+  }, [gridRows, gridCols, maxColors, enhanceEdges, onConvert]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
