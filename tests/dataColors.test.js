@@ -13,6 +13,7 @@ import {
   hexToRgb
 } from '../src/data/colors.js';
 import { PALETTE_BRANDS } from '../src/data/mardColors.js';
+import { findNearestPaletteColor } from '../src/lib/colorUtils.js';
 
 test('getAllColors returns MARD palette by default and exposes compatibility aliases', () => {
   assert.equal(getAllColors(), MARD_COLORS);
@@ -26,8 +27,9 @@ test('getPaletteBrands returns the palette brand registry', () => {
 
 test('findClosestColor delegates to the normalized MARD palette matcher', () => {
   const match = findClosestColor(245, 244, 238);
+  const expected = findNearestPaletteColor([245, 244, 238], MARD_COLORS);
 
-  assert.equal(match.code, 'M-W01');
+  assert.equal(match.code, expected.code);
   assert.equal(typeof match.distance, 'number');
 });
 

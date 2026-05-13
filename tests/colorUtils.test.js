@@ -9,6 +9,7 @@ import {
   findNearestPaletteColor,
   normalizePaletteColor
 } from '../src/lib/colorUtils.js';
+import { MARD_COLORS } from '../src/data/mardColors.js';
 
 test('hexToRgbArray and rgbArrayToHex round-trip uppercase hex colors', () => {
   assert.deepEqual(hexToRgbArray('#1a2b3c'), [26, 43, 60]);
@@ -108,4 +109,12 @@ test('findNearestPaletteColor skips disabled color ids', () => {
   });
 
   assert.equal(match.code, 'PINK');
+});
+
+test('MARD color data has unique codes and valid uppercase hex values', () => {
+  const codes = new Set(MARD_COLORS.map((color) => color.code));
+
+  assert.equal(codes.size, MARD_COLORS.length);
+  assert.equal(MARD_COLORS.length, 291);
+  assert.equal(MARD_COLORS.every((color) => /^#[0-9A-F]{6}$/.test(color.hex)), true);
 });
