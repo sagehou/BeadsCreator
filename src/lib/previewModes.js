@@ -20,6 +20,14 @@ export function previewModeClassName(mode) {
     : 'preview-bead';
 }
 
+export function canvasPreviewClassName(showGrid, mode) {
+  return [
+    'bead-canvas',
+    showGrid ? 'show-grid' : '',
+    previewModeClassName(mode)
+  ].filter(Boolean).join(' ');
+}
+
 export function cloneGridForPreview(grid) {
   return grid.map((row) => [...row]);
 }

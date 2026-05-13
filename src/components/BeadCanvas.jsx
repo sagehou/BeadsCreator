@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { canvasPreviewClassName } from '../lib/previewModes';
 
 export default function BeadCanvas({
   grid,
@@ -6,6 +7,7 @@ export default function BeadCanvas({
   showGrid,
   activeTool,
   onCellAction,
+  previewMode = 'bead',
 }) {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
@@ -134,7 +136,7 @@ export default function BeadCanvas({
         }}
       >
         <div
-          className={`bead-canvas ${showGrid ? 'show-grid' : ''}`}
+          className={canvasPreviewClassName(showGrid, previewMode)}
           style={{
             gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`,
             gridTemplateRows: `repeat(${rows}, ${cellSize}px)`,
@@ -150,7 +152,9 @@ export default function BeadCanvas({
                 onMouseEnter={() => handleCellMouseEnter(x, y)}
                 onTouchStart={() => handleTouchStart(x, y)}
                 onTouchEnd={handleTouchEnd}
-              />
+              >
+                <span className="cell-coordinate">{x + 1},{y + 1}</span>
+              </div>
             ))
           )}
         </div>

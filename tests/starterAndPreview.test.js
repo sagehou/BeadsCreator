@@ -8,6 +8,7 @@ import {
 import {
   PREVIEW_MODE_OPTIONS,
   PREVIEW_MODES,
+  canvasPreviewClassName,
   previewModeClassName,
   cloneGridForPreview
 } from '../src/lib/previewModes.js';
@@ -42,6 +43,17 @@ test('PREVIEW_MODE_OPTIONS labels are valid UI strings', () => {
 
 test('previewModeClassName falls back for invalid values', () => {
   assert.equal(previewModeClassName('bad class'), 'preview-bead');
+});
+
+test('canvasPreviewClassName combines grid and validated preview classes', () => {
+  assert.equal(
+    canvasPreviewClassName(true, PREVIEW_MODES.FINE_GLITTER),
+    'bead-canvas show-grid preview-fine-glitter'
+  );
+  assert.equal(
+    canvasPreviewClassName(false, 'bad class'),
+    'bead-canvas preview-bead'
+  );
 });
 
 test('cloneGridForPreview does not mutate source grid', () => {
