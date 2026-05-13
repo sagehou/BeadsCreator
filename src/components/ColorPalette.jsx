@@ -1,8 +1,32 @@
 import { useMemo, useState } from 'react';
 import { MARD_COLORS } from '../data/colors';
 import { filterPaletteColors } from '../lib/paletteSearch';
-import { sortPaletteByColorFamily, sortPaletteByMardCode } from '../lib/paletteSorting';
+import { groupPaletteByColorFamily, sortPaletteByColorFamily, sortPaletteByMardCode } from '../lib/paletteSorting';
 import { hexForPaletteValue, paletteValueForColor, resolvePaletteValue } from '../lib/paletteValue';
+
+function ColorSwatch({ color, selectedColor, selectedPaletteColor, hoveredColor, onHover, onSelectColor }) {
+  const paletteValue = paletteValueForColor(color);
+  const selected = selectedPaletteColor?.id === color.id || selectedColor === color.hex;
+
+  return (
+    <div
+      className={`color-swatch ${selected ? 'selected' : ''}`}
+      style={{ backgroundColor: color.hex }}
+      title={`${color.brand} ${color.code} ${color.name}`}
+      aria-label={`${color.brand} ${color.code} ${color.name}`}
+      data-code={color.code}
+      onClick={() => onSelectColor(paletteValue)}
+      onMouseEnter={() => onHover(color)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {hoveredColor?.id === color.id && (
+        <div className="color-tooltip">
+          {color.brand} {color.code} {color.name}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ColorPalette({ selectedColor, onSelectColor, recentColors }) {
   const [query, setQuery] = useState('');
@@ -15,6 +39,9 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
       ? sortPaletteByMardCode(filtered)
       : sortPaletteByColorFamily(filtered);
   }, [query, sortMode]);
+  const colorGroups = useMemo(() => (
+    sortMode === 'family' ? groupPaletteByColorFamily(colors) : []
+  ), [colors, sortMode]);
   const selectedPaletteColor = useMemo(
     () => resolvePaletteValue(selectedColor, MARD_COLORS),
     [selectedColor]
@@ -45,30 +72,41 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
       </div>
 
       <div className="color-grid">
-        {colors.map(color => {
-          const paletteValue = paletteValueForColor(color);
-          const selected = selectedPaletteColor?.id === color.id || selectedColor === color.hex;
-
-          return (
-            <div
-              key={color.id}
-              className={`color-swatch ${selected ? 'selected' : ''}`}
-              style={{ backgroundColor: color.hex }}
-              title={`${color.brand} ${color.code} ${color.name}`}
-              aria-label={`${color.brand} ${color.code} ${color.name}`}
-              data-code={color.code}
-              onClick={() => onSelectColor(paletteValue)}
-              onMouseEnter={() => setHoveredColor(color)}
-              onMouseLeave={() => setHoveredColor(null)}
-            >
-              {hoveredColor?.id === color.id && (
-                <div className="color-tooltip">
-                  {color.brand} {color.code} {color.name}
-                </div>
-              )}
+        {sortMode === 'family' ? (
+          colorGroups.map((group) => (
+            <div className="color-family-group" key={group.id}>
+              <div className="color-family-heading">
+                <span>{group.label}</span>
+                <span>{group.colors.length}</span>
+              </div>
+              <div className="color-family-swatches">
+                {group.colors.map(color => (
+                  <ColorSwatch
+                    key={color.id}
+                    color={color}
+                    selectedColor={selectedColor}
+                    selectedPaletteColor={selectedPaletteColor}
+                    hoveredColor={hoveredColor}
+                    onHover={setHoveredColor}
+                    onSelectColor={onSelectColor}
+                  />
+                ))}
+              </div>
             </div>
-          );
-        })}
+          ))
+        ) : (
+          colors.map(color => (
+            <ColorSwatch
+              key={color.id}
+              color={color}
+              selectedColor={selectedColor}
+              selectedPaletteColor={selectedPaletteColor}
+              hoveredColor={hoveredColor}
+              onHover={setHoveredColor}
+              onSelectColor={onSelectColor}
+            />
+          ))
+        )}
       </div>
 
       {recentColors.length > 0 && (

@@ -11,6 +11,7 @@ export default function BomPanel({
   onPreviewModeChange,
   onExportPng,
   onExportCsv,
+  onExportPrintPattern,
   onExportProject,
   onImportProjectFile,
   projectStatus
@@ -88,6 +89,10 @@ export default function BomPanel({
       {/* Export CSV */}
       <button className="bom-export-btn" style={{ marginTop: 6 }} onClick={onExportCsv}>
         📊 导出物料 CSV
+      </button>
+
+      <button className="bom-export-btn" style={{ marginTop: 6 }} onClick={onExportPrintPattern}>
+        🧾 导出打印图纸
       </button>
 
       <div className="palette-section-title" style={{ marginTop: 12 }}>💾 项目文件</div>

@@ -56,6 +56,19 @@ function familyOrder(hsl) {
   return 7;
 }
 
+const COLOR_FAMILIES = [
+  { id: 'red', label: '红' },
+  { id: 'orange', label: '橙' },
+  { id: 'yellow', label: '黄' },
+  { id: 'green', label: '绿' },
+  { id: 'cyan', label: '青' },
+  { id: 'blue', label: '蓝' },
+  { id: 'purple', label: '紫' },
+  { id: 'pink', label: '粉' },
+  { id: 'brown', label: '棕' },
+  { id: 'neutral', label: '黑白灰' }
+];
+
 function huePosition(hue, family) {
   if (family === 0 && hue >= 345) return hue - 360;
   return hue;
@@ -99,4 +112,18 @@ export function sortPaletteByMardCode(colors) {
     }) ||
     (a.hex ?? '').localeCompare(b.hex ?? '')
   ));
+}
+
+export function groupPaletteByColorFamily(colors) {
+  const groups = new Map(COLOR_FAMILIES.map((family) => [
+    family.id,
+    { ...family, colors: [] }
+  ]));
+
+  for (const color of sortPaletteByColorFamily(colors)) {
+    const family = COLOR_FAMILIES[sortKey(color).family] ?? COLOR_FAMILIES[COLOR_FAMILIES.length - 1];
+    groups.get(family.id).colors.push(color);
+  }
+
+  return [...groups.values()].filter((group) => group.colors.length > 0);
 }

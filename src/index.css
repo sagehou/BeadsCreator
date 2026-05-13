@@ -254,6 +254,32 @@ input, select { font-family: inherit; }
   overflow-y: auto;
   padding: 2px 1px 4px;
 }
+.color-family-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0 5px;
+}
+
+.color-family-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 0;
+  color: var(--text-light);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.color-family-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-content: flex-start;
+}
+
 .color-swatch {
   width: 19px; height: 19px;
   border-radius: 50%;

@@ -10,6 +10,7 @@ import { createProjectFile, loadBoardState, parseProjectFile, saveBoardState } f
 import { mirrorGridHorizontal } from './lib/gridTransform';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
+import { createPrintablePatternHtml } from './lib/printPattern';
 import {
   clearSelection,
   extractSelection,
@@ -399,6 +400,21 @@ export default function App() {
     link.click();
   }, [grid]);
 
+  const handleExportPrintPattern = useCallback(() => {
+    const html = createPrintablePatternHtml({
+      grid,
+      allColors: getAllColors(),
+      title: `拼豆图纸 ${grid[0]?.length ?? gridSize.cols}×${grid.length}`
+    });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const link = document.createElement('a');
+    const objectUrl = URL.createObjectURL(blob);
+    link.download = `beads_pattern_${grid[0]?.length ?? gridSize.cols}x${grid.length}.html`;
+    link.href = objectUrl;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  }, [grid, gridSize.cols]);
+
   const handleExportProject = useCallback(() => {
     try {
       const content = createProjectFile({
@@ -593,6 +609,7 @@ export default function App() {
           onPreviewModeChange={setPreviewMode}
           onExportPng={handleExportPng}
           onExportCsv={handleExportCsv}
+          onExportPrintPattern={handleExportPrintPattern}
           onExportProject={handleExportProject}
           onImportProjectFile={handleImportProjectFile}
           projectStatus={projectStatus}
