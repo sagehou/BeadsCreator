@@ -1,4 +1,4 @@
-export const STARTER_PATTERN_NAMES = ['heart', 'star', 'flower', 'cat', 'rainbow', 'smile'];
+export const STARTER_PATTERN_NAMES = ['happy', 'wink', 'heart-eyes', 'cool', 'sleepy', 'blush'];
 
 const COLORS = {
   black: '#000000',
@@ -6,9 +6,7 @@ const COLORS = {
   red: '#FC283C',
   yellow: '#F4D738',
   blue: '#3677D2',
-  green: '#1C9C4F',
-  pink: '#FEB89F',
-  brown: '#8A4526'
+  pink: '#FEB89F'
 };
 
 function emptyGrid(rows, cols) {
@@ -27,81 +25,85 @@ function drawCircle(grid, cx, cy, radius, color) {
   }
 }
 
-function drawHeart(grid, cx, cy) {
-  drawCircle(grid, cx - 4, cy - 4, 5, COLORS.red);
-  drawCircle(grid, cx + 4, cy - 4, 5, COLORS.red);
-  for (let y = cy - 3; y <= cy + 9; y += 1) {
-    const halfWidth = Math.max(0, 10 - Math.abs(y - cy + 1));
-    for (let x = cx - halfWidth; x <= cx + halfWidth; x += 1) setCell(grid, x, y, COLORS.red);
-  }
+function drawFaceBase(grid, cx, cy, color = COLORS.yellow) {
+  drawCircle(grid, cx, cy, 11, color);
 }
 
-function drawStar(grid, cx, cy) {
-  for (let i = -10; i <= 10; i += 1) {
-    setCell(grid, cx + i, cy, COLORS.yellow);
-    setCell(grid, cx, cy + i, COLORS.yellow);
-    if (Math.abs(i) <= 7) {
-      setCell(grid, cx + i, cy + i, COLORS.yellow);
-      setCell(grid, cx + i, cy - i, COLORS.yellow);
-    }
-  }
-}
-
-function drawFlower(grid, cx, cy) {
-  drawCircle(grid, cx - 6, cy, 4, COLORS.pink);
-  drawCircle(grid, cx + 6, cy, 4, COLORS.pink);
-  drawCircle(grid, cx, cy - 6, 4, COLORS.pink);
-  drawCircle(grid, cx, cy + 6, 4, COLORS.pink);
-  drawCircle(grid, cx, cy, 4, COLORS.yellow);
-  for (let y = cy + 5; y <= cy + 12; y += 1) setCell(grid, cx, y, COLORS.green);
-}
-
-function drawCat(grid, cx, cy) {
-  drawCircle(grid, cx, cy, 10, COLORS.yellow);
-  for (let i = 0; i < 7; i += 1) {
-    setCell(grid, cx - 9 + i, cy - 9 - i, COLORS.yellow);
-    setCell(grid, cx + 9 - i, cy - 9 - i, COLORS.yellow);
-  }
-  drawCircle(grid, cx - 4, cy - 2, 1, COLORS.black);
-  drawCircle(grid, cx + 4, cy - 2, 1, COLORS.black);
-  setCell(grid, cx, cy + 2, COLORS.pink);
-  for (let i = -3; i <= 3; i += 1) setCell(grid, cx + i, cy + 6 + Math.abs(i % 2), COLORS.black);
-}
-
-function drawRainbow(grid, cx, cy) {
-  const bands = [COLORS.red, COLORS.yellow, COLORS.green, COLORS.blue];
-  for (let b = 0; b < bands.length; b += 1) {
-    const radius = 12 - b * 2;
-    for (let x = cx - radius; x <= cx + radius; x += 1) {
-      const yOffset = Math.round(Math.sqrt(Math.max(0, radius ** 2 - (x - cx) ** 2)));
-      setCell(grid, x, cy - yOffset, bands[b]);
-      setCell(grid, x, cy - yOffset + 1, bands[b]);
-    }
-  }
-}
-
-function drawSmile(grid, cx, cy) {
-  drawCircle(grid, cx, cy, 11, COLORS.yellow);
-  drawCircle(grid, cx - 4, cy - 3, 1, COLORS.black);
-  drawCircle(grid, cx + 4, cy - 3, 1, COLORS.black);
+function drawSmileMouth(grid, cx, cy, color = COLORS.red) {
   for (let x = -5; x <= 5; x += 1) {
     const y = cy + 4 + Math.round(0.12 * x * x);
-    setCell(grid, cx + x, y, COLORS.red);
+    setCell(grid, cx + x, y, color);
   }
+}
+
+function drawHappy(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy);
+  drawCircle(grid, cx - 4, cy - 3, 1, COLORS.black);
+  drawCircle(grid, cx + 4, cy - 3, 1, COLORS.black);
+  drawCircle(grid, cx - 7, cy + 2, 2, COLORS.pink);
+  drawCircle(grid, cx + 7, cy + 2, 2, COLORS.pink);
+  drawSmileMouth(grid, cx, cy);
+}
+
+function drawWink(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy, COLORS.pink);
+  drawCircle(grid, cx - 4, cy - 3, 1, COLORS.black);
+  for (let x = 2; x <= 7; x += 1) setCell(grid, cx + x, cy - 3 + Math.abs(x - 4), COLORS.black);
+  drawSmileMouth(grid, cx, cy, COLORS.red);
+}
+
+function drawHeartEyes(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy);
+  for (const eyeX of [cx - 5, cx + 5]) {
+    drawCircle(grid, eyeX - 1, cy - 4, 2, COLORS.red);
+    drawCircle(grid, eyeX + 1, cy - 4, 2, COLORS.red);
+    setCell(grid, eyeX, cy - 1, COLORS.red);
+  }
+  drawSmileMouth(grid, cx, cy, COLORS.red);
+}
+
+function drawCool(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy);
+  for (let x = -8; x <= 8; x += 1) setCell(grid, cx + x, cy - 4, COLORS.black);
+  for (let y = -5; y <= -2; y += 1) {
+    for (let x = -8; x <= -2; x += 1) setCell(grid, cx + x, cy + y, COLORS.black);
+    for (let x = 2; x <= 8; x += 1) setCell(grid, cx + x, cy + y, COLORS.black);
+  }
+  for (let x = -4; x <= 4; x += 1) setCell(grid, cx + x, cy + 5, COLORS.red);
+}
+
+function drawSleepy(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy, COLORS.blue);
+  for (let x = -7; x <= -2; x += 1) setCell(grid, cx + x, cy - 3 + Math.abs(x + 4), COLORS.black);
+  for (let x = 2; x <= 7; x += 1) setCell(grid, cx + x, cy - 3 + Math.abs(x - 4), COLORS.black);
+  for (let x = -3; x <= 3; x += 1) setCell(grid, cx + x, cy + 5, COLORS.black);
+  for (let i = 0; i < 4; i += 1) {
+    setCell(grid, cx + 8 + i, cy - 12, COLORS.white);
+    setCell(grid, cx + 11 - i, cy - 9, COLORS.white);
+  }
+}
+
+function drawBlush(grid, cx, cy) {
+  drawFaceBase(grid, cx, cy, COLORS.pink);
+  drawCircle(grid, cx - 4, cy - 3, 1, COLORS.black);
+  drawCircle(grid, cx + 4, cy - 3, 1, COLORS.black);
+  drawCircle(grid, cx - 7, cy + 2, 2, COLORS.red);
+  drawCircle(grid, cx + 7, cy + 2, 2, COLORS.red);
+  for (let x = -3; x <= 3; x += 1) setCell(grid, cx + x, cy + 5, COLORS.red);
 }
 
 export function generateStarterPattern(name = randomStarterPatternName(), rows = 29, cols = 29) {
   const grid = emptyGrid(rows, cols);
   const cx = Math.floor(cols / 2);
   const cy = Math.floor(rows / 2);
-  const patternName = STARTER_PATTERN_NAMES.includes(name) ? name : 'heart';
+  const patternName = STARTER_PATTERN_NAMES.includes(name) ? name : 'happy';
 
-  if (patternName === 'heart') drawHeart(grid, cx, cy);
-  if (patternName === 'star') drawStar(grid, cx, cy);
-  if (patternName === 'flower') drawFlower(grid, cx, cy);
-  if (patternName === 'cat') drawCat(grid, cx, cy);
-  if (patternName === 'rainbow') drawRainbow(grid, cx, cy + 7);
-  if (patternName === 'smile') drawSmile(grid, cx, cy);
+  if (patternName === 'happy') drawHappy(grid, cx, cy);
+  if (patternName === 'wink') drawWink(grid, cx, cy);
+  if (patternName === 'heart-eyes') drawHeartEyes(grid, cx, cy);
+  if (patternName === 'cool') drawCool(grid, cx, cy);
+  if (patternName === 'sleepy') drawSleepy(grid, cx, cy);
+  if (patternName === 'blush') drawBlush(grid, cx, cy);
 
   return grid;
 }

@@ -100,8 +100,8 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   }, [processImage]);
 
   return (
-    <div style={{ padding: '0 2px' }}>
-      <div className="palette-section-title">图片转拼豆</div>
+    <div className="image-converter-card">
+      <div className="palette-section-title">导入图片</div>
 
       <div
         className={`upload-area ${dragOver ? 'drag-over' : ''}`}
@@ -110,8 +110,8 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        <div className="upload-icon">图片</div>
-        <div>点击或拖拽上传图片</div>
+        <div className="upload-icon">🖼️</div>
+        <div>点击或拖拽图片生成图纸</div>
         <input
           ref={fileInputRef}
           type="file"

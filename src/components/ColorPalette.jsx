@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
 import { MARD_COLORS } from '../data/colors';
 import { filterPaletteColors } from '../lib/paletteSearch';
+import { sortPaletteByColorFamily } from '../lib/paletteSorting';
 import { hexForPaletteValue, paletteValueForColor, resolvePaletteValue } from '../lib/paletteValue';
 
 export default function ColorPalette({ selectedColor, onSelectColor, recentColors }) {
   const [query, setQuery] = useState('');
   const [hoveredColor, setHoveredColor] = useState(null);
 
-  const colors = useMemo(() => filterPaletteColors(MARD_COLORS, query), [query]);
+  const colors = useMemo(
+    () => sortPaletteByColorFamily(filterPaletteColors(MARD_COLORS, query)),
+    [query]
+  );
   const selectedPaletteColor = useMemo(
     () => resolvePaletteValue(selectedColor, MARD_COLORS),
     [selectedColor]

@@ -1,0 +1,61 @@
+export const BOARD_STORAGE_KEY = 'beadscreator.board.v1';
+
+function defaultStorage() {
+  return typeof window !== 'undefined' ? window.localStorage : null;
+}
+
+function isValidGrid(grid) {
+  if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0])) return false;
+
+  const cols = grid[0].length;
+  if (cols === 0) return false;
+
+  return grid.every((row) => (
+    Array.isArray(row) &&
+    row.length === cols &&
+    row.every((cell) => cell === null || typeof cell === 'string')
+  ));
+}
+
+function normalizeBoardState(state) {
+  if (!state || !isValidGrid(state.grid)) return null;
+
+  const rows = state.grid.length;
+  const cols = state.grid[0].length;
+  const gridSize = state.gridSize?.rows === rows && state.gridSize?.cols === cols
+    ? state.gridSize
+    : { rows, cols };
+
+  return {
+    grid: state.grid,
+    gridSize,
+    selectedColor: typeof state.selectedColor === 'string' ? state.selectedColor : undefined,
+    recentColors: Array.isArray(state.recentColors)
+      ? state.recentColors.filter((value) => typeof value === 'string').slice(0, 8)
+      : []
+  };
+}
+
+export function loadBoardState(storage = defaultStorage()) {
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(BOARD_STORAGE_KEY);
+    if (!raw) return null;
+    return normalizeBoardState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function saveBoardState(storage = defaultStorage(), state) {
+  if (!storage) return;
+
+  const normalized = normalizeBoardState(state);
+  if (!normalized) {
+    storage.removeItem?.(BOARD_STORAGE_KEY);
+    return;
+  }
+
+  storage.setItem(BOARD_STORAGE_KEY, JSON.stringify(normalized));
+}

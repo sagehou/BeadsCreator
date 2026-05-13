@@ -31,6 +31,13 @@ test('all named starter patterns can render at default size', () => {
   }
 });
 
+test('starter patterns are curated expression faces', () => {
+  assert.deepEqual(
+    STARTER_PATTERN_NAMES,
+    ['happy', 'wink', 'heart-eyes', 'cool', 'sleepy', 'blush']
+  );
+});
+
 test('starter pattern colors are all present in the MARD palette', () => {
   const paletteHexes = new Set(MARD_COLORS.map((color) => color.hex));
 

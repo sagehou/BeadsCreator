@@ -6,6 +6,7 @@ import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './data/colors';
+import { loadBoardState, saveBoardState } from './lib/boardPersistence';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
 
@@ -28,15 +29,18 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 }
 
 export default function App() {
-  const initialGrid = useMemo(() => generateSmileyPattern(), []);
+  const savedBoardState = useMemo(() => loadBoardState(), []);
+  const initialGrid = useMemo(() => savedBoardState?.grid ?? generateSmileyPattern(), [savedBoardState]);
   const { current: grid, push, undo, redo, reset, canUndo, canRedo } = useHistory(initialGrid);
 
-  const [gridSize, setGridSize] = useState({ rows: DEFAULT_SIZE, cols: DEFAULT_SIZE });
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_SELECTED_COLOR);
+  const [gridSize, setGridSize] = useState(
+    savedBoardState?.gridSize ?? { rows: DEFAULT_SIZE, cols: DEFAULT_SIZE }
+  );
+  const [selectedColor, setSelectedColor] = useState(savedBoardState?.selectedColor ?? DEFAULT_SELECTED_COLOR);
   const [activeTool, setActiveTool] = useState('pencil');
   const [showGrid, setShowGrid] = useState(true);
   const [symmetry, setSymmetry] = useState(false);
-  const [recentColors, setRecentColors] = useState([]);
+  const [recentColors, setRecentColors] = useState(savedBoardState?.recentColors ?? []);
   const [exportScale, setExportScale] = useState(2);
   const [previewMode, setPreviewMode] = useState(PREVIEW_MODES.BEAD);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -111,6 +115,15 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
+
+  useEffect(() => {
+    saveBoardState(undefined, {
+      grid,
+      gridSize,
+      selectedColor,
+      recentColors
+    });
+  }, [grid, gridSize, selectedColor, recentColors]);
 
   // Resize grid
   const handleResize = useCallback((newRows, newCols) => {
@@ -279,18 +292,18 @@ export default function App() {
 
       {/* Main Area */}
       <div className="app-main">
-        {/* Left: Palette + Image Converter */}
+        {/* Left: Image Converter + Palette */}
         <div className="palette-panel">
-          <ColorPalette
-            selectedColor={selectedColor}
-            onSelectColor={handleSelectColor}
-            recentColors={recentColors}
+          <ImageConverter
+            gridRows={gridSize.rows}
+            gridCols={gridSize.cols}
+            onConvert={handleImageConvert}
           />
-          <div style={{ borderTop: '1px solid rgba(93,64,55,0.08)', marginTop: 8, paddingTop: 8 }}>
-            <ImageConverter
-              gridRows={gridSize.rows}
-              gridCols={gridSize.cols}
-              onConvert={handleImageConvert}
+          <div className="palette-divider">
+            <ColorPalette
+              selectedColor={selectedColor}
+              onSelectColor={handleSelectColor}
+              recentColors={recentColors}
             />
           </div>
         </div>
