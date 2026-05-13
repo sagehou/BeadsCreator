@@ -1,123 +1,109 @@
-/**
- * K-Means clustering Web Worker
- * Runs color quantization off the main thread to prevent UI blocking.
- */
+import { imageDataToDominantGrid } from '../lib/dominantSampling.js';
+import { cleanupSpeckles } from '../lib/gridCleanup.js';
 
-/**
- * Euclidean distance squared between two RGB colors
- */
 function colorDistSq(a, b) {
   return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
 }
 
-/**
- * K-Means++ initialization
- */
-function initCentroids(pixels, k) {
-  const centroids = [];
-  const idx = Math.floor(Math.random() * pixels.length);
-  centroids.push([...pixels[idx]]);
+function uniquePixels(pixels) {
+  const seen = new Set();
+  const unique = [];
 
-  for (let c = 1; c < k; c++) {
-    const dists = pixels.map(p => {
-      let minD = Infinity;
-      for (const cent of centroids) {
-        const d = colorDistSq(p, cent);
-        if (d < minD) minD = d;
-      }
-      return minD;
-    });
-    const totalDist = dists.reduce((s, d) => s + d, 0);
-    let r = Math.random() * totalDist;
-    for (let i = 0; i < pixels.length; i++) {
-      r -= dists[i];
-      if (r <= 0) {
-        centroids.push([...pixels[i]]);
-        break;
-      }
-    }
-    if (centroids.length <= c) {
-      centroids.push([...pixels[Math.floor(Math.random() * pixels.length)]]);
-    }
+  for (const pixel of pixels) {
+    const key = pixel.join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(pixel);
   }
-  return centroids;
+
+  return unique;
 }
 
-/**
- * Run K-Means clustering
- */
+function initCentroids(pixels, k) {
+  const centroids = [pixels[0]];
+  const candidates = uniquePixels(pixels);
+
+  while (centroids.length < k) {
+    let next = null;
+    let nextDistance = -1;
+
+    for (const pixel of candidates) {
+      const minDistance = Math.min(...centroids.map((centroid) => colorDistSq(pixel, centroid)));
+      if (minDistance > nextDistance) {
+        next = pixel;
+        nextDistance = minDistance;
+      }
+    }
+
+    if (!next || centroids.some((centroid) => colorDistSq(centroid, next) === 0)) break;
+    centroids.push(next);
+  }
+
+  while (centroids.length < k) {
+    centroids.push(pixels[centroids.length % pixels.length]);
+  }
+
+  return centroids.map((pixel) => [...pixel]);
+}
+
 function kMeans(pixels, k, maxIter = 20) {
   if (pixels.length === 0) return [];
 
-  const actualK = Math.min(k, pixels.length);
-  let centroids = initCentroids(pixels, actualK);
+  const actualK = Math.max(1, Math.min(k, pixels.length));
+  const centroids = initCentroids(pixels, actualK);
 
-  for (let iter = 0; iter < maxIter; iter++) {
-    // Assign pixels to nearest centroid
+  for (let iter = 0; iter < maxIter; iter += 1) {
     const clusters = Array.from({ length: actualK }, () => []);
 
     for (const pixel of pixels) {
       let minDist = Infinity;
       let minIdx = 0;
-      for (let i = 0; i < centroids.length; i++) {
-        const d = colorDistSq(pixel, centroids[i]);
-        if (d < minDist) {
-          minDist = d;
+      for (let i = 0; i < centroids.length; i += 1) {
+        const dist = colorDistSq(pixel, centroids[i]);
+        if (dist < minDist) {
+          minDist = dist;
           minIdx = i;
         }
       }
       clusters[minIdx].push(pixel);
     }
 
-    // Update centroids
     let converged = true;
-    for (let i = 0; i < actualK; i++) {
+    for (let i = 0; i < actualK; i += 1) {
       if (clusters[i].length === 0) continue;
-      const newCentroid = [0, 0, 0];
-      for (const p of clusters[i]) {
-        newCentroid[0] += p[0];
-        newCentroid[1] += p[1];
-        newCentroid[2] += p[2];
+      const nextCentroid = [0, 0, 0];
+      for (const pixel of clusters[i]) {
+        nextCentroid[0] += pixel[0];
+        nextCentroid[1] += pixel[1];
+        nextCentroid[2] += pixel[2];
       }
-      newCentroid[0] = Math.round(newCentroid[0] / clusters[i].length);
-      newCentroid[1] = Math.round(newCentroid[1] / clusters[i].length);
-      newCentroid[2] = Math.round(newCentroid[2] / clusters[i].length);
+      nextCentroid[0] = Math.round(nextCentroid[0] / clusters[i].length);
+      nextCentroid[1] = Math.round(nextCentroid[1] / clusters[i].length);
+      nextCentroid[2] = Math.round(nextCentroid[2] / clusters[i].length);
 
-      if (colorDistSq(centroids[i], newCentroid) > 1) {
-        converged = false;
-      }
-      centroids[i] = newCentroid;
+      if (colorDistSq(centroids[i], nextCentroid) > 1) converged = false;
+      centroids[i] = nextCentroid;
     }
 
     if (converged) break;
-
-    // Report progress
-    self.postMessage({
-      type: 'progress',
-      progress: Math.round(((iter + 1) / maxIter) * 50)
-    });
   }
 
   return centroids;
 }
 
-/**
- * Apply Laplacian edge detection
- */
 function detectEdges(imageData, width, height) {
   const kernel = [
     0, -1, 0,
     -1, 4, -1,
     0, -1, 0
   ];
-
   const edges = new Float32Array(width * height);
 
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
       let sum = 0;
-      for (let ky = -1; ky <= 1; ky++) {
-        for (let kx = -1; kx <= 1; kx++) {
+      for (let ky = -1; ky <= 1; ky += 1) {
+        for (let kx = -1; kx <= 1; kx += 1) {
           const idx = ((y + ky) * width + (x + kx)) * 4;
           const gray = 0.299 * imageData[idx] + 0.587 * imageData[idx + 1] + 0.114 * imageData[idx + 2];
           sum += gray * kernel[(ky + 1) * 3 + (kx + 1)];
@@ -127,30 +113,23 @@ function detectEdges(imageData, width, height) {
     }
   }
 
-  // Normalize
   let maxEdge = 0;
-  for (let i = 0; i < edges.length; i++) {
+  for (let i = 0; i < edges.length; i += 1) {
     if (edges[i] > maxEdge) maxEdge = edges[i];
   }
   if (maxEdge > 0) {
-    for (let i = 0; i < edges.length; i++) {
-      edges[i] /= maxEdge;
-    }
+    for (let i = 0; i < edges.length; i += 1) edges[i] /= maxEdge;
   }
 
   return edges;
 }
 
-/**
- * Find closest color from palette using Euclidean distance
- */
-function findClosestPaletteColor(r, g, b, palette) {
+function findClosestPaletteColor(rgb, palette) {
   let minDist = Infinity;
   let closestIdx = 0;
 
-  for (let i = 0; i < palette.length; i++) {
-    const c = palette[i];
-    const dist = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+  for (let i = 0; i < palette.length; i += 1) {
+    const dist = colorDistSq(rgb, palette[i]);
     if (dist < minDist) {
       minDist = dist;
       closestIdx = i;
@@ -160,89 +139,122 @@ function findClosestPaletteColor(r, g, b, palette) {
   return closestIdx;
 }
 
-/**
- * Main message handler
- */
+function legacyPaletteFromHexColors(hexColors) {
+  return hexColors.map((hex) => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16)
+  ]);
+}
+
+function nearestCentroid(pixel, centroids) {
+  let best = centroids[0];
+  let bestDistance = colorDistSq(pixel, best);
+
+  for (let i = 1; i < centroids.length; i += 1) {
+    const distance = colorDistSq(pixel, centroids[i]);
+    if (distance < bestDistance) {
+      best = centroids[i];
+      bestDistance = distance;
+    }
+  }
+
+  return best;
+}
+
+function legacyConvertToPaletteIndices({
+  imageData,
+  width,
+  height,
+  paletteHexColors,
+  maxColors,
+  enhanceEdges
+}) {
+  const pixels = [];
+  for (let i = 0; i < imageData.length; i += 4) {
+    pixels.push([imageData[i], imageData[i + 1], imageData[i + 2]]);
+  }
+
+  const centroids = kMeans(pixels, maxColors);
+  const palette = legacyPaletteFromHexColors(paletteHexColors);
+  const edges = enhanceEdges ? detectEdges(imageData, width, height) : null;
+
+  return pixels.map((pixel, index) => {
+    const centroid = [...nearestCentroid(pixel, centroids)];
+    if (edges && edges[index] > 0.3) {
+      const edgeWeight = edges[index] * 0.5;
+      centroid[0] = Math.round(centroid[0] * (1 - edgeWeight));
+      centroid[1] = Math.round(centroid[1] * (1 - edgeWeight));
+      centroid[2] = Math.round(centroid[2] * (1 - edgeWeight));
+    }
+    return findClosestPaletteColor(centroid, palette);
+  });
+}
+
 self.onmessage = function (e) {
-  const { imageData, width, height, paletteHexColors, maxColors, enhanceEdges } = e.data;
+  const {
+    imageData,
+    sourceWidth,
+    sourceHeight,
+    width,
+    height,
+    paletteColors,
+    paletteHexColors,
+    maxColors = 16,
+    enhanceEdges = false,
+    cleanupThreshold = 0,
+    bucketSize = 16
+  } = e.data;
 
   try {
-    // Step 1: Extract pixel data
-    const pixels = [];
-    for (let i = 0; i < imageData.length; i += 4) {
-      pixels.push([imageData[i], imageData[i + 1], imageData[i + 2]]);
+    const usesLegacyContract = !paletteColors && paletteHexColors;
+
+    self.postMessage({ type: 'progress', progress: 10 });
+
+    if (usesLegacyContract) {
+      const result = legacyConvertToPaletteIndices({
+        imageData,
+        width,
+        height,
+        paletteHexColors,
+        maxColors,
+        enhanceEdges
+      });
+
+      self.postMessage({ type: 'progress', progress: 75 });
+      self.postMessage({ type: 'progress', progress: 98 });
+      self.postMessage({
+        type: 'complete',
+        result,
+        width,
+        height
+      });
+      return;
     }
 
-    self.postMessage({ type: 'progress', progress: 5 });
-
-    // Step 2: K-Means quantization
-    const centroids = kMeans(pixels, maxColors);
-
-    self.postMessage({ type: 'progress', progress: 55 });
-
-    // Step 3: Parse palette colors to RGB
-    const paletteRgb = paletteHexColors.map(hex => [
-      parseInt(hex.slice(1, 3), 16),
-      parseInt(hex.slice(3, 5), 16),
-      parseInt(hex.slice(5, 7), 16)
-    ]);
-
-    // Step 4: Edge detection if enabled
-    let edges = null;
-    if (enhanceEdges) {
-      edges = detectEdges(imageData, width, height);
-    }
-
-    self.postMessage({ type: 'progress', progress: 65 });
-
-    // Step 5: Map each pixel to nearest centroid, then to palette color
-    const result = new Array(width * height);
-
-    for (let i = 0; i < pixels.length; i++) {
-      // Find nearest centroid
-      let minDist = Infinity;
-      let nearestCentroid = centroids[0];
-      for (const c of centroids) {
-        const d = colorDistSq(pixels[i], c);
-        if (d < minDist) {
-          minDist = d;
-          nearestCentroid = c;
-        }
-      }
-
-      let r = nearestCentroid[0];
-      let g = nearestCentroid[1];
-      let b = nearestCentroid[2];
-
-      // Edge enhancement: bias towards darker colors for edge pixels
-      if (edges && edges[i] > 0.3) {
-        const edgeWeight = edges[i] * 0.5;
-        r = Math.round(r * (1 - edgeWeight));
-        g = Math.round(g * (1 - edgeWeight));
-        b = Math.round(b * (1 - edgeWeight));
-      }
-
-      // Map to closest palette color
-      result[i] = findClosestPaletteColor(r, g, b, paletteRgb);
-
-      if (i % 100 === 0) {
-        self.postMessage({
-          type: 'progress',
-          progress: 65 + Math.round((i / pixels.length) * 30)
-        });
-      }
-    }
-
-    self.postMessage({ type: 'progress', progress: 98 });
-
-    // Return result as palette indices
-    self.postMessage({
-      type: 'complete',
-      result: result,
-      width: width,
-      height: height
+    const grid = imageDataToDominantGrid({
+      imageData,
+      sourceWidth: sourceWidth ?? width,
+      sourceHeight: sourceHeight ?? height,
+      targetWidth: width,
+      targetHeight: height,
+      palette: paletteColors,
+      bucketSize
     });
 
+    self.postMessage({ type: 'progress', progress: 75 });
+
+    const cleanedGrid = cleanupThreshold > 0
+      ? cleanupSpeckles(grid, paletteColors, { minRegionSize: cleanupThreshold })
+      : grid;
+
+    self.postMessage({ type: 'progress', progress: 98 });
+    self.postMessage({
+      type: 'complete',
+      resultGrid: cleanedGrid,
+      width,
+      height
+    });
   } catch (error) {
     self.postMessage({
       type: 'error',
