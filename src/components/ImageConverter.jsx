@@ -1,14 +1,15 @@
 import { useState, useRef, useCallback } from 'react';
-import { PERLER_COLORS, HAMA_COLORS } from '../data/colors';
+import { MARD_COLORS } from '../data/colors';
 
-const PALETTE_COLORS = [...PERLER_COLORS, ...HAMA_COLORS];
+const paletteColors = MARD_COLORS;
+const maxColors = 16;
+const enhanceEdges = false;
 
 export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [dragOver, setDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [enhanceEdges, setEnhanceEdges] = useState(false);
-  const [maxColors, setMaxColors] = useState(16);
+  const [cleanupThreshold, setCleanupThreshold] = useState(1);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
 
@@ -22,18 +23,16 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     const url = URL.createObjectURL(file);
 
     img.onload = () => {
-      // Scale image to grid size
       const canvas = document.createElement('canvas');
-      canvas.width = gridCols;
-      canvas.height = gridRows;
-      const ctx = canvas.getContext('2d');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, gridCols, gridRows);
-      const imageData = ctx.getImageData(0, 0, gridCols, gridRows);
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
 
-      // Create worker
       if (workerRef.current) workerRef.current.terminate();
 
       const worker = new Worker(
@@ -47,17 +46,20 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         if (msg.type === 'progress') {
           setProgress(msg.progress);
         } else if (msg.type === 'complete') {
-          // Convert palette indices back to hex grid
-          const newGrid = [];
-          for (let y = 0; y < msg.height; y++) {
-            const row = [];
-            for (let x = 0; x < msg.width; x++) {
-              const idx = msg.result[y * msg.width + x];
-              row.push(PALETTE_COLORS[idx].hex);
+          if (msg.resultGrid) {
+            onConvert(msg.resultGrid);
+          } else {
+            const newGrid = [];
+            for (let y = 0; y < msg.height; y += 1) {
+              const row = [];
+              for (let x = 0; x < msg.width; x += 1) {
+                const idx = msg.result[y * msg.width + x];
+                row.push(paletteColors[idx].hex);
+              }
+              newGrid.push(row);
             }
-            newGrid.push(row);
+            onConvert(newGrid);
           }
-          onConvert(newGrid);
           setProcessing(false);
           setProgress(100);
           worker.terminate();
@@ -70,16 +72,20 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
 
       worker.postMessage({
         imageData: imageData.data,
+        sourceWidth: imageData.width,
+        sourceHeight: imageData.height,
         width: gridCols,
         height: gridRows,
-        paletteHexColors: PALETTE_COLORS.map(c => c.hex),
-        maxColors: maxColors,
-        enhanceEdges: enhanceEdges,
+        paletteColors,
+        maxColors,
+        cleanupThreshold,
+        bucketSize: 16,
+        enhanceEdges,
       });
     };
 
     img.src = url;
-  }, [gridRows, gridCols, maxColors, enhanceEdges, onConvert]);
+  }, [gridRows, gridCols, cleanupThreshold, onConvert]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -95,7 +101,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
 
   return (
     <div style={{ padding: '0 2px' }}>
-      <div className="palette-section-title">📷 图片转拼豆</div>
+      <div className="palette-section-title">图片转拼豆</div>
 
       <div
         className={`upload-area ${dragOver ? 'drag-over' : ''}`}
@@ -104,7 +110,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        <div className="upload-icon">🖼️</div>
+        <div className="upload-icon">图片</div>
         <div>点击或拖拽上传图片</div>
         <input
           ref={fileInputRef}
@@ -117,28 +123,16 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
 
       <div className="upload-options">
         <div className="upload-option">
-          <label>最大色数:</label>
+          <label>去杂色</label>
           <input
             type="range"
-            min="4"
-            max="24"
-            value={maxColors}
-            onChange={(e) => setMaxColors(Number(e.target.value))}
+            min="0"
+            max="8"
+            value={cleanupThreshold}
+            onChange={(e) => setCleanupThreshold(Number(e.target.value))}
             style={{ flex: 1 }}
           />
-          <span style={{ fontSize: '0.78rem', minWidth: 22, textAlign: 'right' }}>{maxColors}</span>
-        </div>
-
-        <div className="upload-option">
-          <label>轮廓增强:</label>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={enhanceEdges}
-              onChange={(e) => setEnhanceEdges(e.target.checked)}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <span style={{ fontSize: '0.78rem', minWidth: 22, textAlign: 'right' }}>{cleanupThreshold}</span>
         </div>
       </div>
 
