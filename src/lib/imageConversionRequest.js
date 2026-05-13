@@ -11,7 +11,10 @@ export function createImageConversionRequest({
   cleanupThreshold,
   bucketSize,
   enhanceEdges,
-  preprocessMode = 'cartoon'
+  preprocessMode = 'cartoon',
+  outlineMode = 'none',
+  outlineColor = '#000000',
+  outlineWidth = 1
 }) {
   return {
     imageData: source.imageData,
@@ -24,6 +27,9 @@ export function createImageConversionRequest({
     cleanupThreshold,
     bucketSize,
     enhanceEdges,
-    preprocessMode
+    preprocessMode,
+    outlineMode,
+    outlineColor,
+    outlineWidth
   };
 }

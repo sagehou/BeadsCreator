@@ -1,5 +1,6 @@
 import { imageDataToDominantGrid } from '../lib/dominantSampling.js';
 import { cleanupSpeckles } from '../lib/gridCleanup.js';
+import { applyOutlineToGrid } from '../lib/gridEffects.js';
 import { stylizeImageForBeads } from '../lib/imagePreprocess.js';
 
 function colorDistSq(a, b) {
@@ -205,7 +206,10 @@ self.onmessage = function (e) {
     enhanceEdges = false,
     cleanupThreshold = 0,
     bucketSize = 16,
-    preprocessMode = 'cartoon'
+    preprocessMode = 'cartoon',
+    outlineMode = 'none',
+    outlineColor = '#000000',
+    outlineWidth = 1
   } = e.data;
 
   try {
@@ -268,11 +272,16 @@ self.onmessage = function (e) {
         similarityThreshold: 12 + cleanupLevel * 10
       })
       : grid;
+    const resultGrid = applyOutlineToGrid(cleanedGrid, {
+      mode: outlineMode,
+      color: outlineColor,
+      width: outlineWidth
+    });
 
     self.postMessage({ type: 'progress', progress: 98 });
     self.postMessage({
       type: 'complete',
-      resultGrid: cleanedGrid,
+      resultGrid,
       width,
       height
     });

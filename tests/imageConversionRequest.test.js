@@ -31,7 +31,10 @@ test('createImageConversionRequest reuses original image data for new board size
     cleanupThreshold: 3,
     bucketSize: 12,
     enhanceEdges: false,
-    preprocessMode: 'none'
+    preprocessMode: 'none',
+    outlineMode: 'custom',
+    outlineColor: '#00FF00',
+    outlineWidth: 2
   }), {
     imageData,
     sourceWidth: 1,
@@ -43,6 +46,9 @@ test('createImageConversionRequest reuses original image data for new board size
     cleanupThreshold: 3,
     bucketSize: 12,
     enhanceEdges: false,
-    preprocessMode: 'none'
+    preprocessMode: 'none',
+    outlineMode: 'custom',
+    outlineColor: '#00FF00',
+    outlineWidth: 2
   });
 });

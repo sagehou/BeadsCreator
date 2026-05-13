@@ -2,6 +2,16 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
 import { hexForPaletteValue } from '../lib/paletteValue';
 import { canvasPreviewClassName } from '../lib/previewModes';
+import { normalizeSelectionRect, pointInRect } from '../lib/selectionGrid';
+
+function movedRect(rect, delta) {
+  if (!rect || !delta) return null;
+  return {
+    ...rect,
+    x: rect.x + delta.dx,
+    y: rect.y + delta.dy
+  };
+}
 
 export default function BeadCanvas({
   grid,
@@ -9,6 +19,14 @@ export default function BeadCanvas({
   showGrid,
   activeTool,
   onCellAction,
+  onTextStart,
+  selectionRect,
+  selectionPreviewRect,
+  selectionMoveDelta,
+  onSelectionPreview,
+  onSelectionCommit,
+  onSelectionMovePreview,
+  onSelectionMoveCommit,
   previewMode = 'bead',
 }) {
   const containerRef = useRef(null);
@@ -18,11 +36,13 @@ export default function BeadCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
+  const selectionDrag = useRef(null);
 
   const rows = grid.length;
   const cols = grid[0]?.length || 0;
+  const displayedSelection = selectionPreviewRect ?? selectionRect;
+  const displayedMoveRect = movedRect(selectionRect, selectionMoveDelta);
 
-  // Keyboard handlers for space (pan mode)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' && !e.repeat) {
@@ -44,7 +64,6 @@ export default function BeadCanvas({
     };
   }, []);
 
-  // Wheel zoom
   const handleWheel = useCallback((e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -61,12 +80,10 @@ export default function BeadCanvas({
     }
   }, [handleWheel]);
 
-  // Context menu prevention
   const handleContextMenu = useCallback((e) => {
     e.preventDefault();
   }, []);
 
-  // Pan handlers
   const handleMouseDown = useCallback((e) => {
     if (spaceHeld || e.button === 1) {
       setIsPanning(true);
@@ -84,34 +101,94 @@ export default function BeadCanvas({
     }
   }, [isPanning]);
 
+  const finishSelectionDrag = useCallback(() => {
+    const drag = selectionDrag.current;
+    if (!drag) return;
+
+    if (drag.type === 'move') {
+      const dx = drag.current.x - drag.start.x;
+      const dy = drag.current.y - drag.start.y;
+      onSelectionMoveCommit?.(dx, dy);
+    } else {
+      onSelectionCommit?.(normalizeSelectionRect(drag.start, drag.current));
+    }
+    selectionDrag.current = null;
+  }, [onSelectionCommit, onSelectionMoveCommit]);
+
   const handleMouseUp = useCallback(() => {
+    finishSelectionDrag();
     setIsPanning(false);
     setIsDrawing(false);
-  }, []);
+  }, [finishSelectionDrag]);
 
-  // Cell interaction
   const handleCellMouseDown = useCallback((x, y, e) => {
     if (spaceHeld) return;
     e.preventDefault();
+
+    if (activeTool === 'text') {
+      onTextStart?.(x, y);
+      return;
+    }
+
+    if (activeTool === 'select') {
+      const point = { x, y };
+      const movingSelection = selectionRect && pointInRect(point, selectionRect);
+      selectionDrag.current = {
+        type: movingSelection ? 'move' : 'select',
+        start: point,
+        current: point
+      };
+      if (movingSelection) {
+        onSelectionMovePreview?.(0, 0);
+      } else {
+        onSelectionPreview?.(normalizeSelectionRect(point, point));
+      }
+      return;
+    }
+
     const isErase = e.button === 2;
     setIsDrawing(true);
     onCellAction(x, y, isErase ? 'erase' : activeTool);
-  }, [activeTool, onCellAction, spaceHeld]);
+  }, [
+    activeTool,
+    onCellAction,
+    onSelectionMovePreview,
+    onSelectionPreview,
+    onTextStart,
+    selectionRect,
+    spaceHeld
+  ]);
 
   const handleCellMouseEnter = useCallback((x, y) => {
+    const drag = selectionDrag.current;
+    if (drag) {
+      drag.current = { x, y };
+      if (drag.type === 'move') {
+        onSelectionMovePreview?.(x - drag.start.x, y - drag.start.y);
+      } else {
+        onSelectionPreview?.(normalizeSelectionRect(drag.start, drag.current));
+      }
+      return;
+    }
+
     if (isDrawing && !spaceHeld) {
       onCellAction(x, y, activeTool === 'eraser' ? 'erase' : activeTool === 'pencil' ? 'pencil' : null);
     }
-  }, [isDrawing, activeTool, onCellAction, spaceHeld]);
+  }, [isDrawing, activeTool, onCellAction, onSelectionMovePreview, onSelectionPreview, spaceHeld]);
 
-  // Long press for mobile erase
   const longPressTimer = useRef(null);
   const handleTouchStart = useCallback((x, y) => {
+    if (activeTool === 'text') {
+      onTextStart?.(x, y);
+      return;
+    }
+    if (activeTool === 'select') return;
+
     longPressTimer.current = setTimeout(() => {
       onCellAction(x, y, 'erase');
     }, 500);
     onCellAction(x, y, activeTool);
-  }, [activeTool, onCellAction]);
+  }, [activeTool, onCellAction, onTextStart]);
 
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
@@ -147,11 +224,19 @@ export default function BeadCanvas({
           {grid.map((row, y) =>
             row.map((cell, x) => {
               const cellHex = cell ? hexForPaletteValue(cell, MARD_COLORS) : null;
+              const selected = pointInRect({ x, y }, displayedSelection);
+              const moveTarget = pointInRect({ x, y }, displayedMoveRect);
+              const classNames = [
+                'bead-cell',
+                cell ? 'filled' : '',
+                selected ? 'selection-cell' : '',
+                moveTarget ? 'selection-target' : ''
+              ].filter(Boolean).join(' ');
 
               return (
                 <div
                   key={`${x}-${y}`}
-                  className={`bead-cell ${cell ? 'filled' : ''}`}
+                  className={classNames}
                   style={{ backgroundColor: cellHex || 'transparent' }}
                   onMouseDown={(e) => handleCellMouseDown(x, y, e)}
                   onMouseEnter={() => handleCellMouseEnter(x, y)}

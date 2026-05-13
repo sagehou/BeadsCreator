@@ -95,6 +95,38 @@ test('worker applies Q-style preprocessing before dominant sampling by default',
   });
 });
 
+test('worker applies an outline after converting the image to a bead grid', async () => {
+  const worker = await loadWorker();
+  const messages = worker.post({
+    imageData: imageDataFromPixels([
+      [255, 0, 0, 0], [255, 0, 0, 0], [255, 0, 0, 0],
+      [255, 0, 0, 0], [255, 0, 0, 255], [255, 0, 0, 0],
+      [255, 0, 0, 0], [255, 0, 0, 0], [255, 0, 0, 0]
+    ]),
+    sourceWidth: 3,
+    sourceHeight: 3,
+    width: 3,
+    height: 3,
+    paletteColors: palette,
+    cleanupThreshold: 0,
+    bucketSize: 1,
+    preprocessMode: 'none',
+    outlineMode: 'black',
+    outlineWidth: 1
+  });
+
+  assert.deepEqual(messages.at(-1), {
+    type: 'complete',
+    resultGrid: [
+      ['#000000', '#000000', '#000000'],
+      ['#000000', '#FF0000', '#000000'],
+      ['#000000', '#000000', '#000000']
+    ],
+    width: 3,
+    height: 3
+  });
+});
+
 test('worker supports legacy paletteHexColors input with palette index result output', async () => {
   const worker = await loadWorker();
   const messages = worker.post({

@@ -11,11 +11,15 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [cleanupThreshold, setCleanupThreshold] = useState(1);
+  const [outlineMode, setOutlineMode] = useState('none');
+  const [outlineColor, setOutlineColor] = useState('#000000');
+  const [outlineWidth, setOutlineWidth] = useState(1);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
   const sourceRef = useRef(null);
   const lastTargetRef = useRef(null);
-  const lastCleanupThresholdRef = useRef(cleanupThreshold);
+  const optionsSignature = `${cleanupThreshold}|${outlineMode}|${outlineColor}|${outlineWidth}`;
+  const lastOptionsSignatureRef = useRef(optionsSignature);
   const jobIdRef = useRef(0);
 
   const runConversion = useCallback((source, target) => {
@@ -24,7 +28,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     const jobId = jobIdRef.current + 1;
     jobIdRef.current = jobId;
     lastTargetRef.current = target;
-    lastCleanupThresholdRef.current = cleanupThreshold;
+    lastOptionsSignatureRef.current = optionsSignature;
     setProcessing(true);
     setProgress(0);
 
@@ -77,8 +81,11 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       cleanupThreshold,
       bucketSize: 16,
       enhanceEdges,
+      outlineMode,
+      outlineColor,
+      outlineWidth,
     }));
-  }, [cleanupThreshold, onConvert]);
+  }, [cleanupThreshold, optionsSignature, onConvert, outlineMode, outlineColor, outlineWidth]);
 
   const processImage = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -129,9 +136,9 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
 
   useEffect(() => {
     const source = sourceRef.current;
-    if (!source || lastCleanupThresholdRef.current === cleanupThreshold) return;
+    if (!source || lastOptionsSignatureRef.current === optionsSignature) return;
     runConversion(source, { rows: gridRows, cols: gridCols });
-  }, [cleanupThreshold, gridRows, gridCols, runConversion]);
+  }, [optionsSignature, gridRows, gridCols, runConversion]);
 
   useEffect(() => {
     return () => {
@@ -186,6 +193,45 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
           />
           <span style={{ fontSize: '0.78rem', minWidth: 22, textAlign: 'right' }}>{cleanupThreshold}</span>
         </div>
+        <div className="upload-option">
+          <label>描边</label>
+          <select
+            value={outlineMode}
+            onChange={(e) => setOutlineMode(e.target.value)}
+            className="compact-select"
+          >
+            <option value="none">关闭</option>
+            <option value="auto">自动</option>
+            <option value="black">黑边</option>
+            <option value="white">白边</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        {outlineMode !== 'none' && (
+          <div className="upload-option">
+            <label>粗细</label>
+            <input
+              type="range"
+              min="1"
+              max="3"
+              value={outlineWidth}
+              onChange={(e) => setOutlineWidth(Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontSize: '0.78rem', minWidth: 22, textAlign: 'right' }}>{outlineWidth}</span>
+          </div>
+        )}
+        {outlineMode === 'custom' && (
+          <div className="upload-option">
+            <label>颜色</label>
+            <input
+              type="color"
+              value={outlineColor}
+              onChange={(e) => setOutlineColor(e.target.value.toUpperCase())}
+              className="compact-color-input"
+            />
+          </div>
+        )}
       </div>
 
       {processing && (

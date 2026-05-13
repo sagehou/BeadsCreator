@@ -9,6 +9,8 @@ import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './d
 import { loadBoardState, saveBoardState } from './lib/boardPersistence';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
+import { clearSelection, moveSelection } from './lib/selectionGrid';
+import { stampTextOnGrid } from './lib/textRasterizer';
 
 const DEFAULT_SIZE = 29;
 const CELL_SIZE = 18;
@@ -44,6 +46,10 @@ export default function App() {
   const [exportScale, setExportScale] = useState(2);
   const [previewMode, setPreviewMode] = useState(PREVIEW_MODES.BEAD);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [selectionRect, setSelectionRect] = useState(null);
+  const [selectionPreviewRect, setSelectionPreviewRect] = useState(null);
+  const [selectionMoveDelta, setSelectionMoveDelta] = useState(null);
+  const [textDraft, setTextDraft] = useState(null);
 
   // Add color to recent
   const addRecent = useCallback((value) => {
@@ -58,6 +64,15 @@ export default function App() {
     setSelectedColor(value);
     addRecent(value);
   }, [addRecent]);
+
+  const handleToolChange = useCallback((tool) => {
+    setActiveTool(tool);
+    if (tool !== 'select') {
+      setSelectionPreviewRect(null);
+      setSelectionMoveDelta(null);
+    }
+    if (tool !== 'text') setTextDraft(null);
+  }, []);
 
   // Cell action handler
   const handleCellAction = useCallback((x, y, tool) => {
@@ -98,8 +113,53 @@ export default function App() {
         return;
     }
 
-    if (newGrid) push(newGrid);
+    if (newGrid) {
+      push(newGrid);
+      if (tool !== 'eyedropper') setSelectionRect(null);
+    }
   }, [grid, selectedColor, symmetry, push, handleSelectColor]);
+
+  const handleTextStart = useCallback((x, y) => {
+    setTextDraft({
+      x,
+      y,
+      text: 'TEXT',
+      color: hexForPaletteValue(selectedColor, getAllColors()),
+      size: 1
+    });
+  }, [selectedColor]);
+
+  const handleTextConfirm = useCallback(() => {
+    if (!textDraft?.text) return;
+    push(stampTextOnGrid(grid, textDraft.text, textDraft));
+    setTextDraft(null);
+    setSelectionRect(null);
+  }, [grid, push, textDraft]);
+
+  const handleSelectionCommit = useCallback((rect) => {
+    setSelectionRect(rect);
+    setSelectionPreviewRect(null);
+    setSelectionMoveDelta(null);
+  }, []);
+
+  const handleSelectionMoveCommit = useCallback((dx, dy) => {
+    if (!selectionRect) return;
+    if (dx === 0 && dy === 0) {
+      setSelectionMoveDelta(null);
+      return;
+    }
+
+    const maxX = Math.max(0, grid[0].length - selectionRect.width);
+    const maxY = Math.max(0, grid.length - selectionRect.height);
+    const destination = {
+      x: Math.max(0, Math.min(maxX, selectionRect.x + dx)),
+      y: Math.max(0, Math.min(maxY, selectionRect.y + dy))
+    };
+    const moved = moveSelection(grid, selectionRect, destination);
+    push(moved.grid);
+    setSelectionRect(moved.rect);
+    setSelectionMoveDelta(null);
+  }, [grid, push, selectionRect]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -110,11 +170,16 @@ export default function App() {
       } else if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         redo();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && activeTool === 'select' && selectionRect) {
+        e.preventDefault();
+        push(clearSelection(grid, selectionRect));
+        setSelectionRect(null);
+        setSelectionMoveDelta(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [activeTool, grid, push, redo, selectionRect, undo]);
 
   useEffect(() => {
     saveBoardState(undefined, {
@@ -138,12 +203,16 @@ export default function App() {
     }
     setGridSize({ rows: newRows, cols: newCols });
     reset(newGrid);
+    setSelectionRect(null);
+    setTextDraft(null);
   }, [grid, reset]);
 
   // Clear canvas
   const handleClear = useCallback(() => {
     const newGrid = createEmptyGrid(gridSize.rows, gridSize.cols);
     push(newGrid);
+    setSelectionRect(null);
+    setTextDraft(null);
     setShowClearConfirm(false);
   }, [gridSize, push]);
 
@@ -151,6 +220,8 @@ export default function App() {
   const handleImageConvert = useCallback((newGrid) => {
     setGridSize({ rows: newGrid.length, cols: newGrid[0].length });
     push(newGrid);
+    setSelectionRect(null);
+    setTextDraft(null);
   }, [push]);
 
   // Export PNG
@@ -240,7 +311,14 @@ export default function App() {
     return count;
   }, [grid]);
 
-  const toolNames = { pencil: '铅笔', eraser: '橡皮', bucket: '油漆桶', eyedropper: '吸管' };
+  const toolNames = {
+    pencil: '画笔',
+    eraser: '橡皮',
+    bucket: '油漆桶',
+    eyedropper: '吸管',
+    text: '文字',
+    select: '框选'
+  };
 
   return (
     <>
@@ -253,7 +331,7 @@ export default function App() {
 
         <Toolbar
           activeTool={activeTool}
-          onToolChange={setActiveTool}
+          onToolChange={handleToolChange}
           onUndo={undo}
           onRedo={redo}
           canUndo={canUndo}
@@ -316,9 +394,48 @@ export default function App() {
           activeTool={activeTool}
           selectedColor={selectedColor}
           onCellAction={handleCellAction}
+          onTextStart={handleTextStart}
+          selectionRect={selectionRect}
+          selectionPreviewRect={selectionPreviewRect}
+          selectionMoveDelta={selectionMoveDelta}
+          onSelectionPreview={setSelectionPreviewRect}
+          onSelectionCommit={handleSelectionCommit}
+          onSelectionMovePreview={(dx, dy) => setSelectionMoveDelta({ dx, dy })}
+          onSelectionMoveCommit={handleSelectionMoveCommit}
           symmetry={symmetry}
           previewMode={previewMode}
         />
+
+        {textDraft && (
+          <div className="text-editor-popover">
+            <div className="text-editor-title">文字</div>
+            <input
+              className="text-editor-input"
+              value={textDraft.text}
+              onChange={(e) => setTextDraft(prev => ({ ...prev, text: e.target.value }))}
+              autoFocus
+            />
+            <div className="text-editor-row">
+              <label>字号</label>
+              <input
+                type="number"
+                min="1"
+                max="3"
+                value={textDraft.size}
+                onChange={(e) => setTextDraft(prev => ({ ...prev, size: Number(e.target.value) }))}
+              />
+              <input
+                type="color"
+                value={textDraft.color}
+                onChange={(e) => setTextDraft(prev => ({ ...prev, color: e.target.value.toUpperCase() }))}
+              />
+            </div>
+            <div className="text-editor-actions">
+              <button onClick={() => setTextDraft(null)}>取消</button>
+              <button className="confirm" onClick={handleTextConfirm}>插入</button>
+            </div>
+          </div>
+        )}
 
         {/* Right: BOM */}
         <BomPanel
