@@ -1,29 +1,24 @@
-import { useState } from 'react';
-import { PERLER_COLORS, HAMA_COLORS } from '../data/colors';
+import { useMemo, useState } from 'react';
+import { MARD_COLORS } from '../data/colors';
+import { filterPaletteColors } from '../lib/paletteSearch';
 
 export default function ColorPalette({ selectedColor, onSelectColor, recentColors }) {
-  const [activeBrand, setActiveBrand] = useState('Perler');
+  const [query, setQuery] = useState('');
   const [hoveredColor, setHoveredColor] = useState(null);
 
-  const colors = activeBrand === 'Perler' ? PERLER_COLORS : HAMA_COLORS;
+  const colors = useMemo(() => filterPaletteColors(MARD_COLORS, query), [query]);
 
   return (
     <>
       <div className="palette-section-title">🎨 色板</div>
 
-      <div className="palette-tabs">
-        <button
-          className={`palette-tab ${activeBrand === 'Perler' ? 'active' : ''}`}
-          onClick={() => setActiveBrand('Perler')}
-        >
-          Perler
-        </button>
-        <button
-          className={`palette-tab ${activeBrand === 'Hama' ? 'active' : ''}`}
-          onClick={() => setActiveBrand('Hama')}
-        >
-          Hama
-        </button>
+      <div className="palette-search">
+        <input
+          type="search"
+          placeholder="搜索 MARD 色号"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
       </div>
 
       <div className="color-grid">
@@ -38,7 +33,7 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
           >
             {hoveredColor?.id === color.id && (
               <div className="color-tooltip">
-                {color.brand} #{color.code} {color.name}
+                {color.brand} {color.code} {color.name}
               </div>
             )}
           </div>
