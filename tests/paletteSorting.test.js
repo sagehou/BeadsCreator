@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { sortPaletteByColorFamily } from '../src/lib/paletteSorting.js';
+import {
+  sortPaletteByColorFamily,
+  sortPaletteByMardCode
+} from '../src/lib/paletteSorting.js';
 
 test('sortPaletteByColorFamily groups colors by visible color family', () => {
   const palette = [
@@ -15,5 +18,42 @@ test('sortPaletteByColorFamily groups colors by visible color family', () => {
   assert.deepEqual(
     sortPaletteByColorFamily(palette).map((color) => color.code),
     ['R', 'Y', 'G', 'B', 'N']
+  );
+});
+
+test('sortPaletteByColorFamily follows rainbow order before pink, brown, and neutrals', () => {
+  const palette = [
+    { code: 'NBLACK', hex: '#1D1414' },
+    { code: 'WARMWHITE', hex: '#F1EDED' },
+    { code: 'BROWN', hex: '#8A4526' },
+    { code: 'PINK', hex: '#F551A2' },
+    { code: 'PURPLE', hex: '#8854B3' },
+    { code: 'BLUE', hex: '#2158D6' },
+    { code: 'CYAN', hex: '#28DDDE' },
+    { code: 'GREEN', hex: '#2FA85A' },
+    { code: 'YELLOW', hex: '#F5D43A' },
+    { code: 'ORANGE', hex: '#F77C31' },
+    { code: 'RED', hex: '#EF3340' }
+  ];
+
+  assert.deepEqual(
+    sortPaletteByColorFamily(palette).map((color) => color.code),
+    ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'CYAN', 'BLUE', 'PURPLE', 'PINK', 'BROWN', 'WARMWHITE', 'NBLACK']
+  );
+});
+
+test('sortPaletteByMardCode uses natural MARD code naming order', () => {
+  const palette = [
+    { code: 'A10', hex: '#000000' },
+    { code: 'ZG2', hex: '#000000' },
+    { code: 'A2', hex: '#000000' },
+    { code: 'B1', hex: '#000000' },
+    { code: 'A1', hex: '#000000' },
+    { code: 'ZG1', hex: '#000000' }
+  ];
+
+  assert.deepEqual(
+    sortPaletteByMardCode(palette).map((color) => color.code),
+    ['A1', 'A2', 'A10', 'B1', 'ZG1', 'ZG2']
   );
 });

@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
 import { MARD_COLORS } from '../data/colors';
 import { filterPaletteColors } from '../lib/paletteSearch';
-import { sortPaletteByColorFamily } from '../lib/paletteSorting';
+import { sortPaletteByColorFamily, sortPaletteByMardCode } from '../lib/paletteSorting';
 import { hexForPaletteValue, paletteValueForColor, resolvePaletteValue } from '../lib/paletteValue';
 
 export default function ColorPalette({ selectedColor, onSelectColor, recentColors }) {
   const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState('family');
   const [hoveredColor, setHoveredColor] = useState(null);
 
-  const colors = useMemo(
-    () => sortPaletteByColorFamily(filterPaletteColors(MARD_COLORS, query)),
-    [query]
-  );
+  const colors = useMemo(() => {
+    const filtered = filterPaletteColors(MARD_COLORS, query);
+    return sortMode === 'code'
+      ? sortPaletteByMardCode(filtered)
+      : sortPaletteByColorFamily(filtered);
+  }, [query, sortMode]);
   const selectedPaletteColor = useMemo(
     () => resolvePaletteValue(selectedColor, MARD_COLORS),
     [selectedColor]
@@ -21,13 +24,24 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
     <div className="color-palette">
       <div className="palette-section-title">🎨 色板</div>
 
-      <div className="palette-search">
-        <input
-          type="search"
-          placeholder="搜索 MARD 色号"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      <div className="palette-controls">
+        <div className="palette-search">
+          <input
+            type="search"
+            placeholder="搜索 MARD 色号"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <select
+          className="palette-sort-select"
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value)}
+          title="色板排序"
+        >
+          <option value="family">色系</option>
+          <option value="code">色号</option>
+        </select>
       </div>
 
       <div className="color-grid">
@@ -40,6 +54,9 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
               key={color.id}
               className={`color-swatch ${selected ? 'selected' : ''}`}
               style={{ backgroundColor: color.hex }}
+              title={`${color.brand} ${color.code} ${color.name}`}
+              aria-label={`${color.brand} ${color.code} ${color.name}`}
+              data-code={color.code}
               onClick={() => onSelectColor(paletteValue)}
               onMouseEnter={() => setHoveredColor(color)}
               onMouseLeave={() => setHoveredColor(null)}

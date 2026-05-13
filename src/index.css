@@ -181,9 +181,17 @@ input, select { font-family: inherit; }
   flex-direction: column;
 }
 
-.palette-search {
+.palette-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   flex-shrink: 0;
   margin-bottom: 8px;
+}
+
+.palette-search {
+  flex: 1;
+  min-width: 0;
 }
 
 .palette-search input {
@@ -197,6 +205,23 @@ input, select { font-family: inherit; }
 }
 
 .palette-search input:focus {
+  outline: none;
+  border-color: var(--accent-mint);
+  box-shadow: 0 0 0 3px rgba(181,234,215,0.28);
+}
+
+.palette-sort-select {
+  width: 58px;
+  padding: 6px 4px;
+  border: 1.5px solid rgba(93,64,55,0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.72);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.palette-sort-select:focus {
   outline: none;
   border-color: var(--accent-mint);
   box-shadow: 0 0 0 3px rgba(181,234,215,0.28);
