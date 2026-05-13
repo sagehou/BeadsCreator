@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { MARD_COLORS } from '../data/colors';
+import { hexForPaletteValue } from '../lib/paletteValue';
 import { canvasPreviewClassName } from '../lib/previewModes';
 
 export default function BeadCanvas({
@@ -143,19 +145,23 @@ export default function BeadCanvas({
           }}
         >
           {grid.map((row, y) =>
-            row.map((cell, x) => (
-              <div
-                key={`${x}-${y}`}
-                className={`bead-cell ${cell ? 'filled' : ''}`}
-                style={{ backgroundColor: cell || 'transparent' }}
-                onMouseDown={(e) => handleCellMouseDown(x, y, e)}
-                onMouseEnter={() => handleCellMouseEnter(x, y)}
-                onTouchStart={() => handleTouchStart(x, y)}
-                onTouchEnd={handleTouchEnd}
-              >
-                <span className="cell-coordinate">{x + 1},{y + 1}</span>
-              </div>
-            ))
+            row.map((cell, x) => {
+              const cellHex = cell ? hexForPaletteValue(cell, MARD_COLORS) : null;
+
+              return (
+                <div
+                  key={`${x}-${y}`}
+                  className={`bead-cell ${cell ? 'filled' : ''}`}
+                  style={{ backgroundColor: cellHex || 'transparent' }}
+                  onMouseDown={(e) => handleCellMouseDown(x, y, e)}
+                  onMouseEnter={() => handleCellMouseEnter(x, y)}
+                  onTouchStart={() => handleTouchStart(x, y)}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <span className="cell-coordinate">{x + 1},{y + 1}</span>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

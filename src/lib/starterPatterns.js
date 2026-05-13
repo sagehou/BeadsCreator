@@ -1,14 +1,14 @@
 export const STARTER_PATTERN_NAMES = ['heart', 'star', 'flower', 'cat', 'rainbow', 'smile'];
 
 const COLORS = {
-  black: '#232426',
-  white: '#F5F4EE',
-  red: '#F22D41',
-  yellow: '#FAD52D',
-  blue: '#247AD8',
-  green: '#34A85C',
-  pink: '#F6B2A4',
-  brown: '#7B4A2D'
+  black: '#000000',
+  white: '#FFFFFF',
+  red: '#FC283C',
+  yellow: '#F4D738',
+  blue: '#3677D2',
+  green: '#1C9C4F',
+  pink: '#FEB89F',
+  brown: '#8A4526'
 };
 
 function emptyGrid(rows, cols) {

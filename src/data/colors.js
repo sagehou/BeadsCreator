@@ -11,6 +11,8 @@ import { generateStarterPattern } from '../lib/starterPatterns.js';
 
 export { MARD_COLORS };
 
+export const DEFAULT_SELECTED_COLOR = MARD_COLORS.find((color) => color.code === 'F4')?.id ?? MARD_COLORS[0].id;
+
 export const PERLER_COLORS = MARD_COLORS;
 export const HAMA_COLORS = MARD_COLORS;
 

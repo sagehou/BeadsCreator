@@ -5,7 +5,8 @@ import BeadCanvas from './components/BeadCanvas';
 import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
-import { generateSmileyPattern, getAllColors } from './data/colors';
+import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './data/colors';
+import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
 
 const DEFAULT_SIZE = 29;
@@ -31,7 +32,7 @@ export default function App() {
   const { current: grid, push, undo, redo, reset, canUndo, canRedo } = useHistory(initialGrid);
 
   const [gridSize, setGridSize] = useState({ rows: DEFAULT_SIZE, cols: DEFAULT_SIZE });
-  const [selectedColor, setSelectedColor] = useState('#FFD700');
+  const [selectedColor, setSelectedColor] = useState(DEFAULT_SELECTED_COLOR);
   const [activeTool, setActiveTool] = useState('pencil');
   const [showGrid, setShowGrid] = useState(true);
   const [symmetry, setSymmetry] = useState(false);
@@ -41,17 +42,17 @@ export default function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Add color to recent
-  const addRecent = useCallback((hex) => {
+  const addRecent = useCallback((value) => {
     setRecentColors(prev => {
-      const filtered = prev.filter(c => c !== hex);
-      return [hex, ...filtered].slice(0, 8);
+      const filtered = prev.filter(c => c !== value);
+      return [value, ...filtered].slice(0, 8);
     });
   }, []);
 
   // Select color handler
-  const handleSelectColor = useCallback((hex) => {
-    setSelectedColor(hex);
-    addRecent(hex);
+  const handleSelectColor = useCallback((value) => {
+    setSelectedColor(value);
+    addRecent(value);
   }, [addRecent]);
 
   // Cell action handler
@@ -154,11 +155,12 @@ export default function App() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const exportStyle = exportPreviewStyleForMode(previewMode);
+    const allColors = getAllColors();
 
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (grid[y][x]) {
-          ctx.fillStyle = grid[y][x];
+          ctx.fillStyle = hexForPaletteValue(grid[y][x], allColors);
           if (exportStyle.shape === 'roundedRect') {
             const inset = s * exportStyle.insetRatio;
             const size = s - inset * 2;

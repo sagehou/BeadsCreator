@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react';
 import { MARD_COLORS } from '../data/colors';
 import { filterPaletteColors } from '../lib/paletteSearch';
+import { hexForPaletteValue, paletteValueForColor, resolvePaletteValue } from '../lib/paletteValue';
 
 export default function ColorPalette({ selectedColor, onSelectColor, recentColors }) {
   const [query, setQuery] = useState('');
   const [hoveredColor, setHoveredColor] = useState(null);
 
   const colors = useMemo(() => filterPaletteColors(MARD_COLORS, query), [query]);
+  const selectedPaletteColor = useMemo(
+    () => resolvePaletteValue(selectedColor, MARD_COLORS),
+    [selectedColor]
+  );
 
   return (
     <>
@@ -22,34 +27,39 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
       </div>
 
       <div className="color-grid">
-        {colors.map(color => (
-          <div
-            key={color.id}
-            className={`color-swatch ${selectedColor === color.hex ? 'selected' : ''}`}
-            style={{ backgroundColor: color.hex }}
-            onClick={() => onSelectColor(color.hex)}
-            onMouseEnter={() => setHoveredColor(color)}
-            onMouseLeave={() => setHoveredColor(null)}
-          >
-            {hoveredColor?.id === color.id && (
-              <div className="color-tooltip">
-                {color.brand} {color.code} {color.name}
-              </div>
-            )}
-          </div>
-        ))}
+        {colors.map(color => {
+          const paletteValue = paletteValueForColor(color);
+          const selected = selectedPaletteColor?.id === color.id || selectedColor === color.hex;
+
+          return (
+            <div
+              key={color.id}
+              className={`color-swatch ${selected ? 'selected' : ''}`}
+              style={{ backgroundColor: color.hex }}
+              onClick={() => onSelectColor(paletteValue)}
+              onMouseEnter={() => setHoveredColor(color)}
+              onMouseLeave={() => setHoveredColor(null)}
+            >
+              {hoveredColor?.id === color.id && (
+                <div className="color-tooltip">
+                  {color.brand} {color.code} {color.name}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {recentColors.length > 0 && (
         <>
           <div className="palette-section-title" style={{ marginTop: 12 }}>🕐 最近使用</div>
           <div className="recent-colors">
-            {recentColors.map((hex, i) => (
+            {recentColors.map((value, i) => (
               <div
-                key={`${hex}-${i}`}
+                key={`${value}-${i}`}
                 className="recent-swatch"
-                style={{ backgroundColor: hex }}
-                onClick={() => onSelectColor(hex)}
+                style={{ backgroundColor: hexForPaletteValue(value, MARD_COLORS) }}
+                onClick={() => onSelectColor(value)}
               />
             ))}
           </div>

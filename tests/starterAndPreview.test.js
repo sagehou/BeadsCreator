@@ -5,6 +5,7 @@ import {
   STARTER_PATTERN_NAMES,
   generateStarterPattern
 } from '../src/lib/starterPatterns.js';
+import { MARD_COLORS } from '../src/data/colors.js';
 import {
   PREVIEW_MODE_OPTIONS,
   PREVIEW_MODES,
@@ -27,6 +28,18 @@ test('all named starter patterns can render at default size', () => {
     const grid = generateStarterPattern(name, 29, 29);
     assert.equal(grid.length, 29);
     assert.equal(grid[0].length, 29);
+  }
+});
+
+test('starter pattern colors are all present in the MARD palette', () => {
+  const paletteHexes = new Set(MARD_COLORS.map((color) => color.hex));
+
+  for (const name of STARTER_PATTERN_NAMES) {
+    const usedColors = new Set(generateStarterPattern(name, 29, 29).flat().filter(Boolean));
+
+    for (const color of usedColors) {
+      assert.equal(paletteHexes.has(color), true, `${name} uses non-MARD color ${color}`);
+    }
   }
 });
 

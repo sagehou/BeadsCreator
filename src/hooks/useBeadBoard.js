@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { resolvePaletteValue } from '../lib/paletteValue.js';
 
 /**
  * Custom hook for undo/redo history management (50 steps)
@@ -84,16 +85,23 @@ export function createEmptyGrid(rows, cols) {
 /**
  * Count beads by color in a grid
  */
-export function countBeads(grid, allColors) {
+export function countBeads(grid, allColors = []) {
   const counts = {};
   for (const row of grid) {
     for (const cell of row) {
       if (cell) {
-        if (!counts[cell]) {
-          const colorInfo = allColors.find(c => c.hex === cell);
-          counts[cell] = { hex: cell, count: 0, info: colorInfo || { brand: '?', code: '?', name: cell } };
+        const colorInfo = resolvePaletteValue(cell, allColors);
+        const key = colorInfo?.id ?? cell;
+        if (!counts[key]) {
+          counts[key] = {
+            key,
+            value: key,
+            hex: colorInfo?.hex ?? cell,
+            count: 0,
+            info: colorInfo || { brand: '?', code: '?', name: cell }
+          };
         }
-        counts[cell].count++;
+        counts[key].count++;
       }
     }
   }

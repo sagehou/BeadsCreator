@@ -35,7 +35,7 @@ export default function BomPanel({
           </thead>
           <tbody>
             {beadCounts.map(item => (
-              <tr key={item.hex}>
+              <tr key={item.key ?? item.hex}>
                 <td>
                   <span className="bom-color-dot" style={{ backgroundColor: item.hex }} />
                 </td>
