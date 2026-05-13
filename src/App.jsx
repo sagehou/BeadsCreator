@@ -53,8 +53,8 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(true);
   const [symmetry, setSymmetry] = useState(false);
   const [recentColors, setRecentColors] = useState(savedBoardState?.recentColors ?? []);
-  const [exportScale, setExportScale] = useState(2);
-  const [previewMode, setPreviewMode] = useState(PREVIEW_MODES.BEAD);
+  const [exportScale, setExportScale] = useState(savedBoardState?.exportScale ?? 2);
+  const [previewMode, setPreviewMode] = useState(savedBoardState?.previewMode ?? PREVIEW_MODES.BEAD);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [selectionRect, setSelectionRect] = useState(null);
   const [selectionPreviewRect, setSelectionPreviewRect] = useState(null);
@@ -281,9 +281,11 @@ export default function App() {
       grid,
       gridSize,
       selectedColor,
-      recentColors
+      recentColors,
+      exportScale,
+      previewMode
     });
-  }, [grid, gridSize, selectedColor, recentColors]);
+  }, [grid, gridSize, selectedColor, recentColors, exportScale, previewMode]);
 
   // Resize grid
   const handleResize = useCallback((newRows, newCols) => {
@@ -421,7 +423,9 @@ export default function App() {
         grid,
         gridSize,
         selectedColor,
-        recentColors
+        recentColors,
+        exportScale,
+        previewMode
       });
       const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
       const link = document.createElement('a');
@@ -435,7 +439,7 @@ export default function App() {
     } catch {
       setProjectStatus('项目文件保存失败');
     }
-  }, [grid, gridSize, recentColors, selectedColor]);
+  }, [grid, gridSize, recentColors, selectedColor, exportScale, previewMode]);
 
   const handleImportProjectFile = useCallback(async (file) => {
     if (!file) return;
@@ -451,6 +455,8 @@ export default function App() {
       reset(imported.grid);
       if (imported.selectedColor) setSelectedColor(imported.selectedColor);
       setRecentColors(imported.recentColors ?? []);
+      setExportScale(imported.exportScale ?? 2);
+      setPreviewMode(imported.previewMode ?? PREVIEW_MODES.BEAD);
       setSelectionRect(null);
       setSelectionPreviewRect(null);
       setSelectionMoveDelta(null);

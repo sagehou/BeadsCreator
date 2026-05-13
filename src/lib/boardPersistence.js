@@ -1,6 +1,10 @@
 export const BOARD_STORAGE_KEY = 'beadscreator.board.v1';
 export const PROJECT_FILE_APP = 'BeadsCreator';
 export const PROJECT_FILE_VERSION = 1;
+export const DEFAULT_EXPORT_SCALE = 2;
+export const DEFAULT_PREVIEW_MODE = 'bead';
+
+const VALID_PREVIEW_MODES = new Set(['bead', 'iron', 'towel', 'fine-glitter', 'coarse-glitter']);
 
 function defaultStorage() {
   return typeof window !== 'undefined' ? window.localStorage : null;
@@ -27,6 +31,12 @@ function normalizeBoardState(state) {
   const gridSize = state.gridSize?.rows === rows && state.gridSize?.cols === cols
     ? state.gridSize
     : { rows, cols };
+  const exportScale = Number.isInteger(state.exportScale) && state.exportScale >= 1 && state.exportScale <= 4
+    ? state.exportScale
+    : DEFAULT_EXPORT_SCALE;
+  const previewMode = VALID_PREVIEW_MODES.has(state.previewMode)
+    ? state.previewMode
+    : DEFAULT_PREVIEW_MODE;
 
   return {
     grid: state.grid,
@@ -34,7 +44,9 @@ function normalizeBoardState(state) {
     selectedColor: typeof state.selectedColor === 'string' ? state.selectedColor : undefined,
     recentColors: Array.isArray(state.recentColors)
       ? state.recentColors.filter((value) => typeof value === 'string').slice(0, 8)
-      : []
+      : [],
+    exportScale,
+    previewMode
   };
 }
 

@@ -28,14 +28,18 @@ test('board state round-trips through storage without replacing imported grids',
     grid: importedGrid,
     gridSize: { rows: 2, cols: 2 },
     selectedColor: 'MARD:R11',
-    recentColors: ['MARD:R11']
+    recentColors: ['MARD:R11'],
+    exportScale: 4,
+    previewMode: 'fine-glitter'
   });
 
   assert.deepEqual(loadBoardState(storage), {
     grid: importedGrid,
     gridSize: { rows: 2, cols: 2 },
     selectedColor: 'MARD:R11',
-    recentColors: ['MARD:R11']
+    recentColors: ['MARD:R11'],
+    exportScale: 4,
+    previewMode: 'fine-glitter'
   });
 });
 
@@ -57,7 +61,9 @@ test('createProjectFile writes a versioned portable board file', () => {
     ],
     gridSize: { rows: 2, cols: 2 },
     selectedColor: 'MARD:B2',
-    recentColors: ['MARD:B2', 'bad', 'MARD:A1']
+    recentColors: ['MARD:B2', 'bad', 'MARD:A1'],
+    exportScale: 3,
+    previewMode: 'towel'
   }, {
     exportedAt: '2026-05-13T00:00:00.000Z'
   });
@@ -73,7 +79,9 @@ test('createProjectFile writes a versioned portable board file', () => {
       ],
       gridSize: { rows: 2, cols: 2 },
       selectedColor: 'MARD:B2',
-      recentColors: ['MARD:B2', 'bad', 'MARD:A1']
+      recentColors: ['MARD:B2', 'bad', 'MARD:A1'],
+      exportScale: 3,
+      previewMode: 'towel'
     }
   });
 });
@@ -83,7 +91,9 @@ test('parseProjectFile loads versioned project files and legacy board JSON', () 
     grid: [['MARD:A1']],
     gridSize: { rows: 1, cols: 1 },
     selectedColor: 'MARD:A1',
-    recentColors: ['MARD:A1']
+    recentColors: ['MARD:A1'],
+    exportScale: 2,
+    previewMode: 'bead'
   };
 
   assert.deepEqual(parseProjectFile(JSON.stringify({
@@ -107,4 +117,23 @@ test('parseProjectFile rejects invalid files without throwing', () => {
     version: 1,
     board: { grid: [['MARD:A1'], ['MARD:B1', null]] }
   })), null);
+});
+
+test('loadBoardState clamps invalid export settings to safe defaults', () => {
+  const storage = createStorage();
+  storage.setItem('beadscreator.board.v1', JSON.stringify({
+    grid: [['MARD:A1']],
+    gridSize: { rows: 1, cols: 1 },
+    exportScale: 99,
+    previewMode: 'not-real'
+  }));
+
+  assert.deepEqual(loadBoardState(storage), {
+    grid: [['MARD:A1']],
+    gridSize: { rows: 1, cols: 1 },
+    selectedColor: undefined,
+    recentColors: [],
+    exportScale: 2,
+    previewMode: 'bead'
+  });
 });
