@@ -2,7 +2,16 @@ import { useMemo } from 'react';
 import { countBeads, } from '../hooks/useBeadBoard';
 import { getAllColors } from '../data/colors';
 
-export default function BomPanel({ grid, exportScale, onExportScaleChange, onExportPng, onExportCsv }) {
+export default function BomPanel({
+  grid,
+  exportScale,
+  previewMode,
+  previewModes,
+  onExportScaleChange,
+  onPreviewModeChange,
+  onExportPng,
+  onExportCsv
+}) {
   const allColors = useMemo(() => getAllColors(), []);
   const beadCounts = useMemo(() => countBeads(grid, allColors), [grid, allColors]);
   const totalBeads = beadCounts.reduce((sum, item) => sum + item.count, 0);
@@ -49,10 +58,23 @@ export default function BomPanel({ grid, exportScale, onExportScaleChange, onExp
         {[1, 2, 3, 4].map(s => (
           <button
             key={s}
+            type="button"
             className={`scale-btn ${exportScale === s ? 'active' : ''}`}
             onClick={() => onExportScaleChange(s)}
           >
             {s}x
+          </button>
+        ))}
+      </div>
+      <div className="bom-preview-modes">
+        {previewModes.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            className={`scale-btn ${previewMode === mode.id ? 'active' : ''}`}
+            onClick={() => onPreviewModeChange(mode.id)}
+          >
+            {mode.label}
           </button>
         ))}
       </div>

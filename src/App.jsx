@@ -6,6 +6,7 @@ import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { generateSmileyPattern, getAllColors } from './data/colors';
+import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES } from './lib/previewModes';
 
 const DEFAULT_SIZE = 29;
 const CELL_SIZE = 18;
@@ -21,6 +22,7 @@ export default function App() {
   const [symmetry, setSymmetry] = useState(false);
   const [recentColors, setRecentColors] = useState([]);
   const [exportScale, setExportScale] = useState(2);
+  const [previewMode, setPreviewMode] = useState(PREVIEW_MODES.BEAD);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Add color to recent
@@ -274,13 +276,17 @@ export default function App() {
           selectedColor={selectedColor}
           onCellAction={handleCellAction}
           symmetry={symmetry}
+          previewMode={previewMode}
         />
 
         {/* Right: BOM */}
         <BomPanel
           grid={grid}
           exportScale={exportScale}
+          previewMode={previewMode}
+          previewModes={PREVIEW_MODE_OPTIONS}
           onExportScaleChange={setExportScale}
+          onPreviewModeChange={setPreviewMode}
           onExportPng={handleExportPng}
           onExportCsv={handleExportCsv}
         />

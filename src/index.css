@@ -548,6 +548,12 @@ input, select { font-family: inherit; }
 .export-scale {
   display: flex; gap: 4px; margin: 8px 0;
 }
+.bom-preview-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
 .scale-btn {
   padding: 4px 10px;
   border-radius: var(--radius-sm);
