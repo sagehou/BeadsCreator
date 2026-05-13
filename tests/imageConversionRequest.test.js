@@ -30,7 +30,8 @@ test('createImageConversionRequest reuses original image data for new board size
     maxColors: 16,
     cleanupThreshold: 3,
     bucketSize: 12,
-    enhanceEdges: false
+    enhanceEdges: false,
+    preprocessMode: 'none'
   }), {
     imageData,
     sourceWidth: 1,
@@ -41,6 +42,7 @@ test('createImageConversionRequest reuses original image data for new board size
     maxColors: 16,
     cleanupThreshold: 3,
     bucketSize: 12,
-    enhanceEdges: false
+    enhanceEdges: false,
+    preprocessMode: 'none'
   });
 });

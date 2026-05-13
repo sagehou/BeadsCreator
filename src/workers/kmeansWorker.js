@@ -1,5 +1,6 @@
 import { imageDataToDominantGrid } from '../lib/dominantSampling.js';
 import { cleanupSpeckles } from '../lib/gridCleanup.js';
+import { stylizeImageForBeads } from '../lib/imagePreprocess.js';
 
 function colorDistSq(a, b) {
   return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
@@ -203,7 +204,8 @@ self.onmessage = function (e) {
     maxColors = 16,
     enhanceEdges = false,
     cleanupThreshold = 0,
-    bucketSize = 16
+    bucketSize = 16,
+    preprocessMode = 'cartoon'
   } = e.data;
 
   try {
@@ -232,10 +234,25 @@ self.onmessage = function (e) {
       return;
     }
 
+    const actualSourceWidth = sourceWidth ?? width;
+    const actualSourceHeight = sourceHeight ?? height;
+    const preparedImageData = preprocessMode === 'none'
+      ? imageData
+      : stylizeImageForBeads({
+        imageData,
+        width: actualSourceWidth,
+        height: actualSourceHeight,
+        smoothingRadius: 1,
+        colorThreshold: 44,
+        posterizeStep: 12,
+        saturation: 1.08,
+        contrast: 1.04
+      });
+
     const grid = imageDataToDominantGrid({
-      imageData,
-      sourceWidth: sourceWidth ?? width,
-      sourceHeight: sourceHeight ?? height,
+      imageData: preparedImageData,
+      sourceWidth: actualSourceWidth,
+      sourceHeight: actualSourceHeight,
       targetWidth: width,
       targetHeight: height,
       palette: paletteColors,

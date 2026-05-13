@@ -8,6 +8,11 @@ const palette = [
   normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' })
 ];
 
+const skinNoisePalette = [
+  normalizePaletteColor({ brand: 'MARD', code: 'SKIN-A', name: 'Skin A', hex: '#F5C6AB' }),
+  normalizePaletteColor({ brand: 'MARD', code: 'SKIN-Q', name: 'Skin Q', hex: '#FCCCA8' })
+];
+
 let workerImportCounter = 0;
 
 function imageDataFromPixels(pixels) {
@@ -61,6 +66,30 @@ test('worker converts image data to a dominant sampled result grid', async () =>
   assert.deepEqual(messages.at(-1), {
     type: 'complete',
     resultGrid: [['#000000', '#FF0000']],
+    width: 2,
+    height: 1
+  });
+});
+
+test('worker applies Q-style preprocessing before dominant sampling by default', async () => {
+  const worker = await loadWorker();
+  const messages = worker.post({
+    imageData: imageDataFromPixels([
+      [245, 198, 171],
+      [250, 203, 177]
+    ]),
+    sourceWidth: 2,
+    sourceHeight: 1,
+    width: 2,
+    height: 1,
+    paletteColors: skinNoisePalette,
+    cleanupThreshold: 0,
+    bucketSize: 1
+  });
+
+  assert.deepEqual(messages.at(-1), {
+    type: 'complete',
+    resultGrid: [['#FCCCA8', '#FCCCA8']],
     width: 2,
     height: 1
   });

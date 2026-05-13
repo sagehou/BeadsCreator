@@ -10,7 +10,8 @@ export function createImageConversionRequest({
   maxColors,
   cleanupThreshold,
   bucketSize,
-  enhanceEdges
+  enhanceEdges,
+  preprocessMode = 'cartoon'
 }) {
   return {
     imageData: source.imageData,
@@ -22,6 +23,7 @@ export function createImageConversionRequest({
     maxColors,
     cleanupThreshold,
     bucketSize,
-    enhanceEdges
+    enhanceEdges,
+    preprocessMode
   };
 }
