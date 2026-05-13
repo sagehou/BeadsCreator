@@ -65,15 +65,32 @@ input, select { font-family: inherit; }
   width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
   border-radius: var(--radius-md);
-  font-size: 1.2rem;
   transition: all var(--transition);
   color: var(--text-secondary);
   position: relative;
+}
+.tool-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .tool-btn:hover {
   background: var(--bg-cream);
   color: var(--text-primary);
   transform: translateY(-1px);
+}
+.tool-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.tool-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+  transform: none;
 }
 .tool-btn.active {
   background: var(--accent-mint);
@@ -649,12 +666,25 @@ input, select { font-family: inherit; }
 }
 
 /* Canvas cursor overrides */
-.cursor-pencil .bead-cell { cursor: crosshair; }
-.cursor-eraser .bead-cell { cursor: cell; }
-.cursor-bucket .bead-cell { cursor: pointer; }
-.cursor-eyedropper .bead-cell { cursor: copy; }
-.cursor-text .bead-cell { cursor: text; }
-.cursor-select .bead-cell { cursor: crosshair; }
+.cursor-pencil .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M4 20l4-1 11-11-3-3L5 16l-1 4z' fill='white' stroke='%235D4037' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 21, crosshair;
+}
+.cursor-eraser .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M5 14l7-7a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-5 5H9l-4-4a1 1 0 0 1 0-1z' fill='white' stroke='%235D4037' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 8 17, cell;
+}
+.cursor-bucket .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M5 12l7-7 7 7-7 7a2 2 0 0 1-3 0l-4-4a2 2 0 0 1 0-3z' fill='white' stroke='%235D4037' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M19 15c1.3 1.5 2 2.6 2 3.4a2 2 0 0 1-4 0c0-.8.7-1.9 2-3.4z' fill='%23B5EAD7' stroke='%235D4037' stroke-width='2'/%3E%3C/svg%3E") 12 18, pointer;
+}
+.cursor-eyedropper .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M14 5l5 5M6 18l1-4L17 4a2 2 0 0 1 3 3L10 17l-4 1z' fill='white' stroke='%235D4037' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 6 18, copy;
+}
+.cursor-text .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M8 5h8M12 5v14M9 19h6' fill='none' stroke='%235D4037' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, text;
+}
+.cursor-select .bead-cell {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M5 5h12v12H5z' fill='white' fill-opacity='.85' stroke='%235D4037' stroke-width='2' stroke-dasharray='3 2'/%3E%3Cpath d='M15 15l5 5' stroke='%235D4037' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 6 6, crosshair;
+}
+.cursor-select .bead-cell.selection-cell { cursor: move; }
 .cursor-pan { cursor: grab !important; }
 .cursor-pan:active { cursor: grabbing !important; }
 .cursor-pan .bead-cell { cursor: inherit !important; }

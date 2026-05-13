@@ -7,10 +7,12 @@ import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './data/colors';
 import { loadBoardState, saveBoardState } from './lib/boardPersistence';
+import { mirrorGridHorizontal } from './lib/gridTransform';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
 import { clearSelection, moveSelection } from './lib/selectionGrid';
 import { stampTextOnGrid } from './lib/textRasterizer';
+import { EDITOR_TOOLS } from './lib/toolConfig';
 
 const DEFAULT_SIZE = 29;
 const CELL_SIZE = 18;
@@ -160,6 +162,14 @@ export default function App() {
     setSelectionRect(moved.rect);
     setSelectionMoveDelta(null);
   }, [grid, push, selectionRect]);
+
+  const handleMirrorHorizontal = useCallback(() => {
+    push(mirrorGridHorizontal(grid));
+    setSelectionRect(null);
+    setSelectionPreviewRect(null);
+    setSelectionMoveDelta(null);
+    setTextDraft(null);
+  }, [grid, push]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -311,14 +321,7 @@ export default function App() {
     return count;
   }, [grid]);
 
-  const toolNames = {
-    pencil: '画笔',
-    eraser: '橡皮',
-    bucket: '油漆桶',
-    eyedropper: '吸管',
-    text: '文字',
-    select: '框选'
-  };
+  const toolNames = Object.fromEntries(EDITOR_TOOLS.map((tool) => [tool.id, tool.label]));
 
   return (
     <>
@@ -338,6 +341,7 @@ export default function App() {
           canRedo={canRedo}
           symmetry={symmetry}
           onToggleSymmetry={() => setSymmetry(s => !s)}
+          onMirrorHorizontal={handleMirrorHorizontal}
           showGrid={showGrid}
           onToggleGrid={() => setShowGrid(s => !s)}
         />

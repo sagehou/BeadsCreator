@@ -3,6 +3,7 @@ import { MARD_COLORS } from '../data/colors';
 import { hexForPaletteValue } from '../lib/paletteValue';
 import { canvasPreviewClassName } from '../lib/previewModes';
 import { normalizeSelectionRect, pointInRect } from '../lib/selectionGrid';
+import { toolCursorClass } from '../lib/toolConfig';
 
 function movedRect(rect, delta) {
   if (!rect || !delta) return null;
@@ -196,7 +197,7 @@ export default function BeadCanvas({
 
   const cursorClass = spaceHeld || isPanning
     ? 'cursor-pan'
-    : `cursor-${activeTool}`;
+    : toolCursorClass(activeTool);
 
   return (
     <div

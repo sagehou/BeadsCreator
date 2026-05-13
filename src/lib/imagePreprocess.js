@@ -6,6 +6,10 @@ function colorDistance(a, b) {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
+function luminance(rgb) {
+  return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+}
+
 function pixelOffset(width, x, y) {
   return (y * width + x) * 4;
 }
@@ -128,6 +132,72 @@ function stylizeTone(imageData, options) {
   return output;
 }
 
+function preserveThinDarkDetails(originalImageData, stylizedImageData, width, height, options) {
+  const spread = Math.max(0, Math.floor(Number(options.detailSpread ?? 1)));
+  const strength = Math.max(0, Math.min(1, Number(options.detailStrength ?? 0.42)));
+  const threshold = Math.max(0, Number(options.detailThreshold ?? 48));
+  if (spread <= 0 || strength <= 0 || threshold <= 0) return stylizedImageData;
+
+  const output = new Uint8ClampedArray(stylizedImageData);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const centerOffset = pixelOffset(width, x, y);
+      if (originalImageData[centerOffset + 3] < 64) continue;
+
+      const centerRgb = rgbAt(originalImageData, width, x, y);
+      const centerLum = luminance(centerRgb);
+      let neighborLumTotal = 0;
+      let neighborCount = 0;
+
+      for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny += 1) {
+        for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx += 1) {
+          if (nx === x && ny === y) continue;
+          const neighborOffset = pixelOffset(width, nx, ny);
+          if (originalImageData[neighborOffset + 3] < 64) continue;
+          neighborLumTotal += luminance(rgbAt(originalImageData, width, nx, ny));
+          neighborCount += 1;
+        }
+      }
+
+      if (neighborCount === 0) continue;
+      const neighborLumAverage = neighborLumTotal / neighborCount;
+      const contrast = neighborLumAverage - centerLum;
+      if (contrast < threshold) continue;
+
+      const contrastWeight = Math.min(1, contrast / (threshold * 2));
+      const detailRgb = rgbAt(stylizedImageData, width, x, y);
+
+      for (let dy = -spread; dy <= spread; dy += 1) {
+        for (let dx = -spread; dx <= spread; dx += 1) {
+          const distance = Math.abs(dx) + Math.abs(dy);
+          if (distance > spread) continue;
+
+          const targetX = x + dx;
+          const targetY = y + dy;
+          if (targetX < 0 || targetY < 0 || targetX >= width || targetY >= height) continue;
+
+          const targetOffset = pixelOffset(width, targetX, targetY);
+          if (originalImageData[targetOffset + 3] < 64) continue;
+
+          const targetLum = luminance(rgbAt(originalImageData, width, targetX, targetY));
+          if (distance > 0 && targetLum <= centerLum + 8) continue;
+
+          const falloff = 1 - (distance / (spread + 1)) * 0.45;
+          const amount = strength * falloff * (0.7 + contrastWeight * 0.3);
+
+          output[targetOffset] = clampChannel(output[targetOffset] * (1 - amount) + detailRgb[0] * amount);
+          output[targetOffset + 1] = clampChannel(output[targetOffset + 1] * (1 - amount) + detailRgb[1] * amount);
+          output[targetOffset + 2] = clampChannel(output[targetOffset + 2] * (1 - amount) + detailRgb[2] * amount);
+          output[targetOffset + 3] = stylizedImageData[targetOffset + 3];
+        }
+      }
+    }
+  }
+
+  return output;
+}
+
 export function stylizeImageForBeads({
   imageData,
   width,
@@ -137,17 +207,26 @@ export function stylizeImageForBeads({
   posterizeLevels,
   posterizeStep,
   saturation,
-  contrast
+  contrast,
+  detailSpread,
+  detailStrength,
+  detailThreshold
 }) {
   const smoothed = edgePreservingSmooth(imageData, width, height, {
     smoothingRadius,
     colorThreshold
   });
 
-  return stylizeTone(smoothed, {
+  const toned = stylizeTone(smoothed, {
     posterizeLevels,
     posterizeStep,
     saturation,
     contrast
+  });
+
+  return preserveThinDarkDetails(imageData, toned, width, height, {
+    detailSpread,
+    detailStrength,
+    detailThreshold
   });
 }

@@ -250,7 +250,10 @@ self.onmessage = function (e) {
         colorThreshold: 44,
         posterizeStep: 12,
         saturation: 1.08,
-        contrast: 1.04
+        contrast: 1.04,
+        detailSpread: 1,
+        detailStrength: 0.42,
+        detailThreshold: 48
       });
 
     const grid = imageDataToDominantGrid({

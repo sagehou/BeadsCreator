@@ -61,3 +61,31 @@ test('stylizeImageForBeads smooths skin-tone noise while preserving dark facial 
   assert.ok(afterSkinSpread < beforeSkinSpread);
   assert.ok(Math.max(...eye) <= 24);
 });
+
+test('stylizeImageForBeads expands thin dark details so pixel sampling keeps facial features', () => {
+  const width = 5;
+  const height = 5;
+  const skin = [238, 188, 158];
+  const eye = [18, 16, 14];
+  const pixels = Array.from({ length: width * height }, () => skin);
+  pixels[2 * width + 2] = eye;
+
+  const stylized = stylizeImageForBeads({
+    imageData: imageDataFromPixels(pixels),
+    width,
+    height,
+    smoothingRadius: 1,
+    colorThreshold: 44,
+    posterizeStep: 12,
+    contrast: 1,
+    saturation: 1,
+    detailSpread: 1,
+    detailStrength: 0.5
+  });
+
+  const leftOfEye = rgbAt(stylized, width, 1, 2);
+  const rightOfEye = rgbAt(stylized, width, 3, 2);
+
+  assert.ok(leftOfEye[0] < 180);
+  assert.ok(rightOfEye[0] < 180);
+});
