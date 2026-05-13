@@ -244,8 +244,12 @@ self.onmessage = function (e) {
 
     self.postMessage({ type: 'progress', progress: 75 });
 
-    const cleanedGrid = cleanupThreshold > 0
-      ? cleanupSpeckles(grid, paletteColors, { minRegionSize: cleanupThreshold })
+    const cleanupLevel = Math.max(0, Number(cleanupThreshold) || 0);
+    const cleanedGrid = cleanupLevel > 0
+      ? cleanupSpeckles(grid, paletteColors, {
+        minRegionSize: cleanupLevel + 1,
+        similarityThreshold: 12 + cleanupLevel * 10
+      })
       : grid;
 
     self.postMessage({ type: 'progress', progress: 98 });

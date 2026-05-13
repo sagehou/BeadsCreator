@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
+import { createImageConversionRequest, hasTargetSizeChanged } from '../lib/imageConversionRequest';
 
 const paletteColors = MARD_COLORS;
 const maxColors = 16;
@@ -12,6 +13,72 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [cleanupThreshold, setCleanupThreshold] = useState(1);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
+  const sourceRef = useRef(null);
+  const lastTargetRef = useRef(null);
+  const lastCleanupThresholdRef = useRef(cleanupThreshold);
+  const jobIdRef = useRef(0);
+
+  const runConversion = useCallback((source, target) => {
+    if (!source) return;
+
+    const jobId = jobIdRef.current + 1;
+    jobIdRef.current = jobId;
+    lastTargetRef.current = target;
+    lastCleanupThresholdRef.current = cleanupThreshold;
+    setProcessing(true);
+    setProgress(0);
+
+    if (workerRef.current) workerRef.current.terminate();
+
+    const worker = new Worker(
+      new URL('../workers/kmeansWorker.js', import.meta.url),
+      { type: 'module' }
+    );
+    workerRef.current = worker;
+
+    worker.onmessage = (e) => {
+      if (jobId !== jobIdRef.current) return;
+
+      const msg = e.data;
+      if (msg.type === 'progress') {
+        setProgress(msg.progress);
+      } else if (msg.type === 'complete') {
+        if (msg.resultGrid) {
+          onConvert(msg.resultGrid);
+        } else {
+          const newGrid = [];
+          for (let y = 0; y < msg.height; y += 1) {
+            const row = [];
+            for (let x = 0; x < msg.width; x += 1) {
+              const idx = msg.result[y * msg.width + x];
+              row.push(paletteColors[idx].hex);
+            }
+            newGrid.push(row);
+          }
+          onConvert(newGrid);
+        }
+        setProcessing(false);
+        setProgress(100);
+        worker.terminate();
+        if (workerRef.current === worker) workerRef.current = null;
+      } else if (msg.type === 'error') {
+        console.error('Worker error:', msg.error);
+        setProcessing(false);
+        worker.terminate();
+        if (workerRef.current === worker) workerRef.current = null;
+      }
+    };
+
+    worker.postMessage(createImageConversionRequest({
+      source,
+      target,
+      paletteColors,
+      maxColors,
+      cleanupThreshold,
+      bucketSize: 16,
+      enhanceEdges,
+    }));
+  }, [cleanupThreshold, onConvert]);
 
   const processImage = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -33,59 +100,44 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
 
-      if (workerRef.current) workerRef.current.terminate();
-
-      const worker = new Worker(
-        new URL('../workers/kmeansWorker.js', import.meta.url),
-        { type: 'module' }
-      );
-      workerRef.current = worker;
-
-      worker.onmessage = (e) => {
-        const msg = e.data;
-        if (msg.type === 'progress') {
-          setProgress(msg.progress);
-        } else if (msg.type === 'complete') {
-          if (msg.resultGrid) {
-            onConvert(msg.resultGrid);
-          } else {
-            const newGrid = [];
-            for (let y = 0; y < msg.height; y += 1) {
-              const row = [];
-              for (let x = 0; x < msg.width; x += 1) {
-                const idx = msg.result[y * msg.width + x];
-                row.push(paletteColors[idx].hex);
-              }
-              newGrid.push(row);
-            }
-            onConvert(newGrid);
-          }
-          setProcessing(false);
-          setProgress(100);
-          worker.terminate();
-        } else if (msg.type === 'error') {
-          console.error('Worker error:', msg.error);
-          setProcessing(false);
-          worker.terminate();
-        }
-      };
-
-      worker.postMessage({
+      const source = {
         imageData: imageData.data,
-        sourceWidth: imageData.width,
-        sourceHeight: imageData.height,
-        width: gridCols,
-        height: gridRows,
-        paletteColors,
-        maxColors,
-        cleanupThreshold,
-        bucketSize: 16,
-        enhanceEdges,
-      });
+        width: imageData.width,
+        height: imageData.height
+      };
+      sourceRef.current = source;
+      runConversion(source, { rows: gridRows, cols: gridCols });
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setProcessing(false);
     };
 
     img.src = url;
-  }, [gridRows, gridCols, cleanupThreshold, onConvert]);
+  }, [gridRows, gridCols, runConversion]);
+
+  useEffect(() => {
+    const source = sourceRef.current;
+    if (!source) return;
+
+    const target = { rows: gridRows, cols: gridCols };
+    if (hasTargetSizeChanged(lastTargetRef.current, target)) {
+      runConversion(source, target);
+    }
+  }, [gridRows, gridCols, runConversion]);
+
+  useEffect(() => {
+    const source = sourceRef.current;
+    if (!source || lastCleanupThresholdRef.current === cleanupThreshold) return;
+    runConversion(source, { rows: gridRows, cols: gridCols });
+  }, [cleanupThreshold, gridRows, gridCols, runConversion]);
+
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+    };
+  }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();

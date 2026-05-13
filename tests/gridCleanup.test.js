@@ -10,7 +10,9 @@ import { normalizePaletteColor } from '../src/lib/colorUtils.js';
 const palette = [
   normalizePaletteColor({ brand: 'MARD', code: 'WHITE', name: 'White', hex: '#FFFFFF' }),
   normalizePaletteColor({ brand: 'MARD', code: 'BLACK', name: 'Black', hex: '#000000' }),
-  normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' })
+  normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' }),
+  normalizePaletteColor({ brand: 'MARD', code: 'NEAR-RED', name: 'Near Red', hex: '#F80406' }),
+  normalizePaletteColor({ brand: 'MARD', code: 'BLUE', name: 'Blue', hex: '#0044CC' })
 ];
 
 test('findConnectedRegions groups exact-color neighbors with BFS', () => {
@@ -87,4 +89,25 @@ test('cleanupSpeckles leaves large intentional regions intact', () => {
   ];
 
   assert.deepEqual(cleanupSpeckles(grid, palette, { minRegionSize: 2 }), grid);
+});
+
+test('cleanupSpeckles merges adjacent similar-color regions within the similarity threshold', () => {
+  const grid = [
+    ['#FF0000', '#FF0000', '#F80406', '#F80406'],
+    ['#FF0000', '#FF0000', '#F80406', '#F80406']
+  ];
+
+  assert.deepEqual(cleanupSpeckles(grid, palette, { similarityThreshold: 34 }), [
+    ['#FF0000', '#FF0000', '#FF0000', '#FF0000'],
+    ['#FF0000', '#FF0000', '#FF0000', '#FF0000']
+  ]);
+});
+
+test('cleanupSpeckles keeps adjacent regions when colors are outside the similarity threshold', () => {
+  const grid = [
+    ['#FF0000', '#FF0000', '#0044CC', '#0044CC'],
+    ['#FF0000', '#FF0000', '#0044CC', '#0044CC']
+  ];
+
+  assert.deepEqual(cleanupSpeckles(grid, palette, { similarityThreshold: 34 }), grid);
 });

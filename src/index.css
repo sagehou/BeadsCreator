@@ -132,9 +132,10 @@ input, select { font-family: inherit; }
   backdrop-filter: blur(8px);
   border-right: 1px solid rgba(93,64,55,0.06);
   display: flex; flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
   padding: 12px;
+  min-height: 0;
 }
 .palette-panel::-webkit-scrollbar { width: 4px; }
 .palette-panel::-webkit-scrollbar-thumb { background: var(--accent-lavender); border-radius: 4px; }
@@ -150,6 +151,22 @@ input, select { font-family: inherit; }
   border-top: 1px solid rgba(93,64,55,0.08);
   margin-top: 10px;
   padding-top: 8px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.color-palette {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.palette-search {
+  flex-shrink: 0;
+  margin-bottom: 8px;
 }
 
 .palette-search input {
@@ -188,7 +205,10 @@ input, select { font-family: inherit; }
 .color-grid {
   display: flex; flex-wrap: wrap; gap: 3px;
   justify-content: flex-start;
-  max-height: 235px;
+  align-content: flex-start;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   padding: 2px 1px 4px;
 }
@@ -652,6 +672,12 @@ input, select { font-family: inherit; }
     width: 100%;
     max-height: none;
     border: 0;
+    overflow: visible;
+  }
+
+  .color-grid {
+    flex: none;
+    max-height: 220px;
   }
 
   .canvas-area {

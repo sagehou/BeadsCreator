@@ -18,7 +18,7 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
   );
 
   return (
-    <>
+    <div className="color-palette">
       <div className="palette-section-title">🎨 色板</div>
 
       <div className="palette-search">
@@ -69,6 +69,6 @@ export default function ColorPalette({ selectedColor, onSelectColor, recentColor
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
