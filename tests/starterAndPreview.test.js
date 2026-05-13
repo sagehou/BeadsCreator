@@ -10,7 +10,8 @@ import {
   PREVIEW_MODES,
   canvasPreviewClassName,
   previewModeClassName,
-  cloneGridForPreview
+  cloneGridForPreview,
+  exportPreviewStyleForMode
 } from '../src/lib/previewModes.js';
 
 test('generateStarterPattern returns a rectangular editable grid', () => {
@@ -62,4 +63,32 @@ test('cloneGridForPreview does not mutate source grid', () => {
   preview[0][0] = '#FFFFFF';
 
   assert.equal(grid[0][0], '#000000');
+});
+
+test('exportPreviewStyleForMode keeps glitter round and distinguishes ironed styles', () => {
+  assert.deepEqual(exportPreviewStyleForMode(PREVIEW_MODES.FINE_GLITTER), {
+    shape: 'circle',
+    radiusRatio: 0.4,
+    sparkleRadiusRatio: 0.045
+  });
+  assert.deepEqual(exportPreviewStyleForMode(PREVIEW_MODES.COARSE_GLITTER), {
+    shape: 'circle',
+    radiusRatio: 0.4,
+    sparkleRadiusRatio: 0.08
+  });
+
+  assert.deepEqual(exportPreviewStyleForMode(PREVIEW_MODES.IRON), {
+    shape: 'roundedRect',
+    insetRatio: 0.08,
+    cornerRadiusRatio: 0.42
+  });
+  assert.deepEqual(exportPreviewStyleForMode(PREVIEW_MODES.TOWEL), {
+    shape: 'roundedRect',
+    insetRatio: 0.07,
+    cornerRadiusRatio: 0.38
+  });
+  assert.notDeepEqual(
+    exportPreviewStyleForMode(PREVIEW_MODES.IRON),
+    exportPreviewStyleForMode(PREVIEW_MODES.TOWEL)
+  );
 });

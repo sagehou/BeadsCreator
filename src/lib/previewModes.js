@@ -31,3 +31,38 @@ export function canvasPreviewClassName(showGrid, mode) {
 export function cloneGridForPreview(grid) {
   return grid.map((row) => [...row]);
 }
+
+export function exportPreviewStyleForMode(mode) {
+  switch (mode) {
+    case PREVIEW_MODES.IRON:
+      return {
+        shape: 'roundedRect',
+        insetRatio: 0.08,
+        cornerRadiusRatio: 0.42
+      };
+    case PREVIEW_MODES.TOWEL:
+      return {
+        shape: 'roundedRect',
+        insetRatio: 0.07,
+        cornerRadiusRatio: 0.38
+      };
+    case PREVIEW_MODES.FINE_GLITTER:
+      return {
+        shape: 'circle',
+        radiusRatio: 0.4,
+        sparkleRadiusRatio: 0.045
+      };
+    case PREVIEW_MODES.COARSE_GLITTER:
+      return {
+        shape: 'circle',
+        radiusRatio: 0.4,
+        sparkleRadiusRatio: 0.08
+      };
+    case PREVIEW_MODES.BEAD:
+    default:
+      return {
+        shape: 'circle',
+        radiusRatio: 0.4
+      };
+  }
+}

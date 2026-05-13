@@ -6,10 +6,25 @@ import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { generateSmileyPattern, getAllColors } from './data/colors';
-import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES } from './lib/previewModes';
+import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
 
 const DEFAULT_SIZE = 29;
 const CELL_SIZE = 18;
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
 
 export default function App() {
   const initialGrid = useMemo(() => generateSmileyPattern(), []);
@@ -138,18 +153,29 @@ export default function App() {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const exportStyle = exportPreviewStyleForMode(previewMode);
+
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         if (grid[y][x]) {
           ctx.fillStyle = grid[y][x];
-          ctx.beginPath();
-          ctx.arc(x * s + s / 2, y * s + s / 2, s * 0.4, 0, Math.PI * 2);
-          ctx.fill();
-          // Subtle bead shadow
-          ctx.fillStyle = 'rgba(0,0,0,0.06)';
-          ctx.beginPath();
-          ctx.arc(x * s + s / 2, y * s + s / 2 + 1, s * 0.38, 0, Math.PI * 2);
-          ctx.fill();
+          if (exportStyle.shape === 'roundedRect') {
+            const inset = s * exportStyle.insetRatio;
+            const size = s - inset * 2;
+            drawRoundedRect(ctx, x * s + inset, y * s + inset, size, size, size * exportStyle.cornerRadiusRatio);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(x * s + s / 2, y * s + s / 2, s * exportStyle.radiusRatio, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (exportStyle.sparkleRadiusRatio) {
+            ctx.fillStyle = 'rgba(255,255,255,0.62)';
+            ctx.beginPath();
+            ctx.arc(x * s + s * 0.36, y * s + s * 0.34, s * exportStyle.sparkleRadiusRatio, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
     }
@@ -174,7 +200,7 @@ export default function App() {
     link.download = `beads_${cols}x${rows}_${exportScale}x.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-  }, [grid, exportScale]);
+  }, [grid, exportScale, previewMode]);
 
   // Export CSV
   const handleExportCsv = useCallback(() => {
