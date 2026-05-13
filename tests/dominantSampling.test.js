@@ -60,3 +60,23 @@ test('imageDataToDominantGrid maps dominant source colors to palette hex values'
     palette
   }), [['#000000', '#FF0000']]);
 });
+
+test('imageDataToDominantGrid samples from an optional source crop rectangle', () => {
+  const black = [0, 0, 0, 255];
+  const red = [255, 0, 0, 255];
+  const data = imageDataFromPixels(4, 1, [black, black, red, red]);
+  const palette = [
+    normalizePaletteColor({ brand: 'MARD', code: 'BLACK', name: 'Black', hex: '#000000' }),
+    normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' })
+  ];
+
+  assert.deepEqual(imageDataToDominantGrid({
+    imageData: data,
+    sourceWidth: 4,
+    sourceHeight: 1,
+    targetWidth: 1,
+    targetHeight: 1,
+    sourceCrop: { x: 2, y: 0, width: 2, height: 1 },
+    palette
+  }), [['#FF0000']]);
+});

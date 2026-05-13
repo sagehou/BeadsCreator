@@ -32,6 +32,8 @@ test('createImageConversionRequest reuses original image data for new board size
     bucketSize: 12,
     enhanceEdges: false,
     preprocessMode: 'none',
+    preprocessOptions: { posterizeStep: 8 },
+    sourceCrop: { x: 2, y: 3, width: 8, height: 9 },
     outlineMode: 'custom',
     outlineColor: '#00FF00',
     outlineWidth: 2
@@ -47,6 +49,8 @@ test('createImageConversionRequest reuses original image data for new board size
     bucketSize: 12,
     enhanceEdges: false,
     preprocessMode: 'none',
+    preprocessOptions: { posterizeStep: 8 },
+    sourceCrop: { x: 2, y: 3, width: 8, height: 9 },
     outlineMode: 'custom',
     outlineColor: '#00FF00',
     outlineWidth: 2

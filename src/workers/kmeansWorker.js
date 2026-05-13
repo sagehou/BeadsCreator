@@ -207,6 +207,8 @@ self.onmessage = function (e) {
     cleanupThreshold = 0,
     bucketSize = 16,
     preprocessMode = 'cartoon',
+    preprocessOptions = {},
+    sourceCrop = null,
     outlineMode = 'none',
     outlineColor = '#000000',
     outlineWidth = 1
@@ -253,7 +255,8 @@ self.onmessage = function (e) {
         contrast: 1.04,
         detailSpread: 1,
         detailStrength: 0.42,
-        detailThreshold: 48
+        detailThreshold: 48,
+        ...preprocessOptions
       });
 
     const grid = imageDataToDominantGrid({
@@ -263,7 +266,8 @@ self.onmessage = function (e) {
       targetWidth: width,
       targetHeight: height,
       palette: paletteColors,
-      bucketSize
+      bucketSize,
+      sourceCrop
     });
 
     self.postMessage({ type: 'progress', progress: 75 });

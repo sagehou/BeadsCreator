@@ -12,6 +12,8 @@ export function createImageConversionRequest({
   bucketSize,
   enhanceEdges,
   preprocessMode = 'cartoon',
+  preprocessOptions = {},
+  sourceCrop = null,
   outlineMode = 'none',
   outlineColor = '#000000',
   outlineWidth = 1
@@ -28,6 +30,8 @@ export function createImageConversionRequest({
     bucketSize,
     enhanceEdges,
     preprocessMode,
+    preprocessOptions,
+    sourceCrop,
     outlineMode,
     outlineColor,
     outlineWidth

@@ -594,6 +594,19 @@ input, select { font-family: inherit; }
   background: transparent;
   padding: 2px;
 }
+.mini-option-btn {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-cream);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mini-option-btn:hover {
+  color: var(--text-primary);
+  background: var(--accent-mint);
+}
 
 /* ===== Toggle Switch ===== */
 .toggle-switch {
@@ -788,6 +801,40 @@ input, select { font-family: inherit; }
   color: var(--text-primary);
 }
 
+.selection-actions-popover {
+  position: absolute;
+  top: 70px;
+  left: 468px;
+  z-index: 200;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.94);
+  box-shadow: var(--card-shadow-hover);
+  border: 1px solid rgba(93,64,55,0.08);
+}
+
+.selection-actions-popover button {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-cream);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.selection-actions-popover button:hover:not(:disabled) {
+  background: var(--accent-mint);
+  color: var(--text-primary);
+}
+
+.selection-actions-popover button:disabled {
+  opacity: 0.36;
+  cursor: default;
+}
+
 @media (max-width: 720px) {
   body {
     overflow: auto;
@@ -853,5 +900,13 @@ input, select { font-family: inherit; }
     right: 12px;
     top: 92px;
     width: auto;
+  }
+
+  .selection-actions-popover {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: 92px;
+    overflow-x: auto;
   }
 }

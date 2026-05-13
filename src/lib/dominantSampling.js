@@ -68,18 +68,25 @@ export function imageDataToDominantGrid({
   targetHeight,
   palette,
   disabledColorIds,
-  bucketSize
+  bucketSize,
+  sourceCrop
 }) {
   const grid = [];
+  const crop = sourceCrop ?? {
+    x: 0,
+    y: 0,
+    width: sourceWidth,
+    height: sourceHeight
+  };
 
   for (let y = 0; y < targetHeight; y += 1) {
     const row = [];
     for (let x = 0; x < targetWidth; x += 1) {
       const rect = {
-        xStart: (x / targetWidth) * sourceWidth,
-        yStart: (y / targetHeight) * sourceHeight,
-        xEnd: ((x + 1) / targetWidth) * sourceWidth,
-        yEnd: ((y + 1) / targetHeight) * sourceHeight
+        xStart: crop.x + (x / targetWidth) * crop.width,
+        yStart: crop.y + (y / targetHeight) * crop.height,
+        xEnd: crop.x + ((x + 1) / targetWidth) * crop.width,
+        yEnd: crop.y + ((y + 1) / targetHeight) * crop.height
       };
       const rgb = dominantRgbForCell(imageData, sourceWidth, sourceHeight, rect, { bucketSize });
       row.push(rgb ? findNearestPaletteColor(rgb, palette, { disabledColorIds }).hex : null);

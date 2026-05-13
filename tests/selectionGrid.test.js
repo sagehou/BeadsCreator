@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import {
   clearSelection,
   extractSelection,
+  flipSelectionHorizontal,
+  flipSelectionVertical,
   moveSelection,
   normalizeSelectionRect,
   pointInRect
@@ -70,4 +72,24 @@ test('pointInRect detects whether a bead is inside a selection', () => {
   assert.equal(pointInRect({ x: 2, y: 3 }, rect), true);
   assert.equal(pointInRect({ x: 5, y: 4 }, rect), true);
   assert.equal(pointInRect({ x: 6, y: 4 }, rect), false);
+});
+
+test('flipSelectionHorizontal and flipSelectionVertical mirror copied selection content', () => {
+  const content = [
+    ['A', null, 'B'],
+    ['C', 'D', null]
+  ];
+
+  assert.deepEqual(flipSelectionHorizontal(content), [
+    ['B', null, 'A'],
+    [null, 'D', 'C']
+  ]);
+  assert.deepEqual(flipSelectionVertical(content), [
+    ['C', 'D', null],
+    ['A', null, 'B']
+  ]);
+  assert.deepEqual(content, [
+    ['A', null, 'B'],
+    ['C', 'D', null]
+  ]);
 });

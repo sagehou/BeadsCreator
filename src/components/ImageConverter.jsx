@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
+import { calculateSourceCrop } from '../lib/imageCrop';
 import { createImageConversionRequest, hasTargetSizeChanged } from '../lib/imageConversionRequest';
+import { IMAGE_IMPORT_PRESETS, imageImportPresetOptions } from '../lib/imageImportPresets';
 
 const paletteColors = MARD_COLORS;
 const maxColors = 16;
@@ -10,7 +12,11 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [dragOver, setDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [cleanupThreshold, setCleanupThreshold] = useState(1);
+  const [importPreset, setImportPreset] = useState('portrait');
+  const [cleanupThreshold, setCleanupThreshold] = useState(imageImportPresetOptions('portrait').cleanupThreshold);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+  const [cropOffsetY, setCropOffsetY] = useState(0);
   const [outlineMode, setOutlineMode] = useState('none');
   const [outlineColor, setOutlineColor] = useState('#000000');
   const [outlineWidth, setOutlineWidth] = useState(1);
@@ -18,7 +24,17 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const workerRef = useRef(null);
   const sourceRef = useRef(null);
   const lastTargetRef = useRef(null);
-  const optionsSignature = `${cleanupThreshold}|${outlineMode}|${outlineColor}|${outlineWidth}`;
+  const presetOptions = imageImportPresetOptions(importPreset);
+  const optionsSignature = [
+    importPreset,
+    cleanupThreshold,
+    cropZoom,
+    cropOffsetX,
+    cropOffsetY,
+    outlineMode,
+    outlineColor,
+    outlineWidth
+  ].join('|');
   const lastOptionsSignatureRef = useRef(optionsSignature);
   const jobIdRef = useRef(0);
 
@@ -79,13 +95,35 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       paletteColors,
       maxColors,
       cleanupThreshold,
-      bucketSize: 16,
+      bucketSize: presetOptions.bucketSize,
       enhanceEdges,
+      preprocessMode: presetOptions.preprocessMode,
+      preprocessOptions: presetOptions.preprocessOptions,
+      sourceCrop: calculateSourceCrop({
+        sourceWidth: source.width,
+        sourceHeight: source.height,
+        targetWidth: target.cols,
+        targetHeight: target.rows,
+        zoom: cropZoom,
+        offsetX: cropOffsetX,
+        offsetY: cropOffsetY
+      }),
       outlineMode,
       outlineColor,
       outlineWidth,
     }));
-  }, [cleanupThreshold, optionsSignature, onConvert, outlineMode, outlineColor, outlineWidth]);
+  }, [
+    cleanupThreshold,
+    cropOffsetX,
+    cropOffsetY,
+    cropZoom,
+    onConvert,
+    optionsSignature,
+    outlineColor,
+    outlineMode,
+    outlineWidth,
+    presetOptions
+  ]);
 
   const processImage = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -158,6 +196,18 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     processImage(file);
   }, [processImage]);
 
+  const handlePresetChange = useCallback((presetId) => {
+    const nextPreset = imageImportPresetOptions(presetId);
+    setImportPreset(nextPreset.id);
+    setCleanupThreshold(nextPreset.cleanupThreshold);
+  }, []);
+
+  const resetCrop = useCallback(() => {
+    setCropZoom(1);
+    setCropOffsetX(0);
+    setCropOffsetY(0);
+  }, []);
+
   return (
     <div className="image-converter-card">
       <div className="palette-section-title">导入图片</div>
@@ -181,6 +231,54 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       </div>
 
       <div className="upload-options">
+        <div className="upload-option">
+          <label>类型</label>
+          <select
+            value={importPreset}
+            onChange={(e) => handlePresetChange(e.target.value)}
+            className="compact-select"
+          >
+            {Object.values(IMAGE_IMPORT_PRESETS).map((preset) => (
+              <option key={preset.id} value={preset.id}>{preset.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="upload-option">
+          <label>缩放</label>
+          <input
+            type="range"
+            min="100"
+            max="300"
+            value={Math.round(cropZoom * 100)}
+            onChange={(e) => setCropZoom(Number(e.target.value) / 100)}
+            style={{ flex: 1 }}
+          />
+          <span style={{ fontSize: '0.78rem', minWidth: 34, textAlign: 'right' }}>{Math.round(cropZoom * 100)}%</span>
+        </div>
+        <div className="upload-option">
+          <label>水平</label>
+          <input
+            type="range"
+            min="-100"
+            max="100"
+            value={Math.round(cropOffsetX * 100)}
+            onChange={(e) => setCropOffsetX(Number(e.target.value) / 100)}
+            style={{ flex: 1 }}
+          />
+          <span style={{ fontSize: '0.78rem', minWidth: 30, textAlign: 'right' }}>{Math.round(cropOffsetX * 100)}</span>
+        </div>
+        <div className="upload-option">
+          <label>垂直</label>
+          <input
+            type="range"
+            min="-100"
+            max="100"
+            value={Math.round(cropOffsetY * 100)}
+            onChange={(e) => setCropOffsetY(Number(e.target.value) / 100)}
+            style={{ flex: 1 }}
+          />
+          <button className="mini-option-btn" type="button" onClick={resetCrop}>居中</button>
+        </div>
         <div className="upload-option">
           <label>去杂色</label>
           <input

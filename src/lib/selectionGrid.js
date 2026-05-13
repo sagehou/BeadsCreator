@@ -58,6 +58,14 @@ export function stampSelection(grid, content, origin) {
   return nextGrid;
 }
 
+export function flipSelectionHorizontal(content) {
+  return content.map((row) => [...row].reverse());
+}
+
+export function flipSelectionVertical(content) {
+  return content.map((row) => [...row]).reverse();
+}
+
 export function moveSelection(grid, rect, destination) {
   const content = extractSelection(grid, rect);
   const clearedGrid = clearSelection(grid, rect);

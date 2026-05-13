@@ -10,7 +10,14 @@ import { loadBoardState, saveBoardState } from './lib/boardPersistence';
 import { mirrorGridHorizontal } from './lib/gridTransform';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
-import { clearSelection, moveSelection } from './lib/selectionGrid';
+import {
+  clearSelection,
+  extractSelection,
+  flipSelectionHorizontal,
+  flipSelectionVertical,
+  moveSelection,
+  stampSelection
+} from './lib/selectionGrid';
 import { stampTextOnGrid } from './lib/textRasterizer';
 import { EDITOR_TOOLS } from './lib/toolConfig';
 
@@ -51,6 +58,7 @@ export default function App() {
   const [selectionRect, setSelectionRect] = useState(null);
   const [selectionPreviewRect, setSelectionPreviewRect] = useState(null);
   const [selectionMoveDelta, setSelectionMoveDelta] = useState(null);
+  const [selectionClipboard, setSelectionClipboard] = useState(null);
   const [textDraft, setTextDraft] = useState(null);
 
   // Add color to recent
@@ -163,6 +171,57 @@ export default function App() {
     setSelectionMoveDelta(null);
   }, [grid, push, selectionRect]);
 
+  const pasteOriginForContent = useCallback((content) => {
+    const width = content[0]?.length ?? 0;
+    const height = content.length;
+    const defaultOrigin = selectionRect
+      ? { x: selectionRect.x, y: selectionRect.y }
+      : {
+        x: Math.floor((grid[0].length - width) / 2),
+        y: Math.floor((grid.length - height) / 2)
+      };
+    return {
+      x: Math.max(0, Math.min(Math.max(0, grid[0].length - width), defaultOrigin.x)),
+      y: Math.max(0, Math.min(Math.max(0, grid.length - height), defaultOrigin.y))
+    };
+  }, [grid, selectionRect]);
+
+  const handleSelectionCopy = useCallback(() => {
+    if (!selectionRect) return;
+    setSelectionClipboard(extractSelection(grid, selectionRect));
+  }, [grid, selectionRect]);
+
+  const handleSelectionCut = useCallback(() => {
+    if (!selectionRect) return;
+    setSelectionClipboard(extractSelection(grid, selectionRect));
+    push(clearSelection(grid, selectionRect));
+  }, [grid, push, selectionRect]);
+
+  const handleSelectionPaste = useCallback(() => {
+    if (!selectionClipboard?.length) return;
+    const origin = pasteOriginForContent(selectionClipboard);
+    push(stampSelection(grid, selectionClipboard, origin));
+    setSelectionRect({
+      x: origin.x,
+      y: origin.y,
+      width: selectionClipboard[0]?.length ?? 0,
+      height: selectionClipboard.length
+    });
+    setSelectionPreviewRect(null);
+    setSelectionMoveDelta(null);
+    setActiveTool('select');
+  }, [grid, pasteOriginForContent, push, selectionClipboard]);
+
+  const handleSelectionFlip = useCallback((direction) => {
+    if (!selectionRect) return;
+    const content = extractSelection(grid, selectionRect);
+    const flipped = direction === 'vertical'
+      ? flipSelectionVertical(content)
+      : flipSelectionHorizontal(content);
+    push(stampSelection(clearSelection(grid, selectionRect), flipped, selectionRect));
+    setSelectionMoveDelta(null);
+  }, [grid, push, selectionRect]);
+
   const handleMirrorHorizontal = useCallback(() => {
     push(mirrorGridHorizontal(grid));
     setSelectionRect(null);
@@ -174,12 +233,25 @@ export default function App() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      const targetTag = e.target?.tagName;
+      const editingText = targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT';
+      if (editingText) return;
+
       if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
       } else if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         redo();
+      } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C') && activeTool === 'select' && selectionRect) {
+        e.preventDefault();
+        handleSelectionCopy();
+      } else if (e.ctrlKey && (e.key === 'x' || e.key === 'X') && activeTool === 'select' && selectionRect) {
+        e.preventDefault();
+        handleSelectionCut();
+      } else if (e.ctrlKey && (e.key === 'v' || e.key === 'V') && selectionClipboard) {
+        e.preventDefault();
+        handleSelectionPaste();
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && activeTool === 'select' && selectionRect) {
         e.preventDefault();
         push(clearSelection(grid, selectionRect));
@@ -189,7 +261,18 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTool, grid, push, redo, selectionRect, undo]);
+  }, [
+    activeTool,
+    grid,
+    handleSelectionCopy,
+    handleSelectionCut,
+    handleSelectionPaste,
+    push,
+    redo,
+    selectionClipboard,
+    selectionRect,
+    undo
+  ]);
 
   useEffect(() => {
     saveBoardState(undefined, {
@@ -214,6 +297,7 @@ export default function App() {
     setGridSize({ rows: newRows, cols: newCols });
     reset(newGrid);
     setSelectionRect(null);
+    setSelectionClipboard(null);
     setTextDraft(null);
   }, [grid, reset]);
 
@@ -438,6 +522,16 @@ export default function App() {
               <button onClick={() => setTextDraft(null)}>取消</button>
               <button className="confirm" onClick={handleTextConfirm}>插入</button>
             </div>
+          </div>
+        )}
+
+        {activeTool === 'select' && (selectionRect || selectionClipboard) && (
+          <div className="selection-actions-popover">
+            <button disabled={!selectionRect} onClick={handleSelectionCopy}>复制</button>
+            <button disabled={!selectionRect} onClick={handleSelectionCut}>剪切</button>
+            <button disabled={!selectionClipboard} onClick={handleSelectionPaste}>粘贴</button>
+            <button disabled={!selectionRect} onClick={() => handleSelectionFlip('horizontal')}>左右翻</button>
+            <button disabled={!selectionRect} onClick={() => handleSelectionFlip('vertical')}>上下翻</button>
           </div>
         )}
 
