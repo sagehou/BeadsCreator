@@ -12,7 +12,9 @@ const palette = [
   normalizePaletteColor({ brand: 'MARD', code: 'BLACK', name: 'Black', hex: '#000000' }),
   normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' }),
   normalizePaletteColor({ brand: 'MARD', code: 'NEAR-RED', name: 'Near Red', hex: '#F80406' }),
-  normalizePaletteColor({ brand: 'MARD', code: 'BLUE', name: 'Blue', hex: '#0044CC' })
+  normalizePaletteColor({ brand: 'MARD', code: 'BLUE', name: 'Blue', hex: '#0044CC' }),
+  normalizePaletteColor({ brand: 'MARD', code: 'SKIN', name: 'Skin', hex: '#FFD0B6' }),
+  normalizePaletteColor({ brand: 'MARD', code: 'MOUTH', name: 'Mouth', hex: '#8B1E3F' })
 ];
 
 test('findConnectedRegions groups exact-color neighbors with BFS', () => {
@@ -110,4 +112,19 @@ test('cleanupSpeckles keeps adjacent regions when colors are outside the similar
   ];
 
   assert.deepEqual(cleanupSpeckles(grid, palette, { similarityThreshold: 34 }), grid);
+});
+
+test('cleanupSpeckles preserves clustered high-contrast facial details before removing speckles', () => {
+  const skin = '#FFD0B6';
+  const grid = [
+    [skin, skin, skin, skin, skin, skin, skin],
+    [skin, skin, skin, skin, skin, skin, skin],
+    [skin, skin, '#000000', skin, '#000000', skin, skin],
+    [skin, skin, skin, skin, skin, skin, skin],
+    [skin, skin, '#8B1E3F', '#8B1E3F', '#8B1E3F', skin, skin],
+    [skin, skin, skin, skin, skin, skin, skin],
+    [skin, skin, skin, skin, skin, skin, skin]
+  ];
+
+  assert.deepEqual(cleanupSpeckles(grid, palette, { minRegionSize: 4 }), grid);
 });

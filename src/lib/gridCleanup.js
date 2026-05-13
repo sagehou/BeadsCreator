@@ -7,6 +7,10 @@ const DIRECTIONS = [
   [0, -1]
 ];
 
+const DEFAULT_DETAIL_CONTRAST_THRESHOLD = 95;
+const DEFAULT_DETAIL_LUMINANCE_DELTA = 35;
+const DEFAULT_DETAIL_MIN_SEPARATION = 1.5;
+
 function cloneGrid(grid) {
   return grid.map((row) => [...row]);
 }
@@ -120,6 +124,91 @@ function bestNeighborForRegion(region, lookup, grid, paletteMap, minRegionSize) 
   return best?.candidate ?? null;
 }
 
+function luminance(rgb) {
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+}
+
+function regionCenter(region) {
+  const total = region.cells.reduce((acc, cell) => {
+    acc.x += cell.x;
+    acc.y += cell.y;
+    return acc;
+  }, { x: 0, y: 0 });
+
+  return {
+    x: total.x / region.cells.length,
+    y: total.y / region.cells.length
+  };
+}
+
+function centerDistance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function isHighContrastDetailCandidate(region, lookup, grid, paletteMap, options) {
+  if (region.cells.length > options.detailMaxRegionSize) return false;
+
+  const sourceRgb = rgbForHex(region.color, paletteMap);
+  if (!sourceRgb) return false;
+
+  const sourceLuminance = luminance(sourceRgb);
+  const neighbors = adjacentRegionsForRegion(region, lookup, grid);
+  if (neighbors.length === 0) return false;
+
+  return neighbors.some((neighbor) => {
+    if (neighbor.cells.length < options.minNeighborRegionSize) return false;
+
+    const neighborRgb = rgbForHex(neighbor.color, paletteMap);
+    if (!neighborRgb) return false;
+
+    const distance = perceptualDistance(sourceRgb, neighborRgb);
+    const luminanceDelta = luminance(neighborRgb) - sourceLuminance;
+    return distance >= options.detailContrastThreshold &&
+      luminanceDelta >= options.detailLuminanceDelta;
+  });
+}
+
+function buildProtectedDetailSet(regions, lookup, grid, paletteMap, minRegionSize, options = {}) {
+  if (options.protectDetails === false || minRegionSize <= 0) return new Set();
+
+  const rows = grid.length;
+  const cols = grid[0]?.length ?? 0;
+  const detailOptions = {
+    detailContrastThreshold: Math.max(0, Number(options.detailContrastThreshold ?? DEFAULT_DETAIL_CONTRAST_THRESHOLD)),
+    detailLuminanceDelta: Math.max(0, Number(options.detailLuminanceDelta ?? DEFAULT_DETAIL_LUMINANCE_DELTA)),
+    detailMaxRegionSize: Math.max(1, Number(options.detailMaxRegionSize ?? Math.max(minRegionSize * 2, 8))),
+    detailClusterRadius: Math.max(1, Number(options.detailClusterRadius ?? Math.max(3, Math.min(rows, cols) * 0.28))),
+    detailMinSeparation: Math.max(0, Number(options.detailMinSeparation ?? DEFAULT_DETAIL_MIN_SEPARATION)),
+    minDetailRegionCount: Math.max(1, Number(options.minDetailRegionCount ?? 2)),
+    minNeighborRegionSize: Math.max(minRegionSize, Number(options.minDetailNeighborRegionSize ?? minRegionSize))
+  };
+
+  const candidates = regions
+    .filter((region) => isHighContrastDetailCandidate(region, lookup, grid, paletteMap, detailOptions))
+    .map((region) => ({
+      region,
+      center: regionCenter(region)
+    }));
+
+  if (candidates.length < detailOptions.minDetailRegionCount) return new Set();
+
+  const protectedIds = new Set();
+  for (const candidate of candidates) {
+    const clusteredCount = candidates.filter((other) => {
+      if (other.region.id === candidate.region.id) return true;
+      const distance = centerDistance(candidate.center, other.center);
+      return distance >= detailOptions.detailMinSeparation &&
+        distance <= detailOptions.detailClusterRadius;
+    }).length;
+
+    if (clusteredCount >= detailOptions.minDetailRegionCount) {
+      protectedIds.add(candidate.region.id);
+    }
+  }
+
+  return protectedIds;
+}
+
 function distanceBetweenRegions(region, candidate, paletteMap) {
   const sourceRgb = rgbForHex(region.color, paletteMap);
   const targetRgb = rgbForHex(candidate.color, paletteMap);
@@ -142,7 +231,7 @@ function chooseMergeDirection(region, candidate) {
     : { source: region, target: candidate };
 }
 
-function bestSimilarMerge(regions, lookup, grid, paletteMap, similarityThreshold) {
+function bestSimilarMerge(regions, lookup, grid, paletteMap, similarityThreshold, protectedRegionIds) {
   let best = null;
 
   for (const region of regions) {
@@ -152,6 +241,8 @@ function bestSimilarMerge(regions, lookup, grid, paletteMap, similarityThreshold
       if (distance > similarityThreshold) continue;
 
       const merge = chooseMergeDirection(region, candidate);
+      if (protectedRegionIds.has(merge.source.id)) continue;
+
       const score = {
         ...merge,
         distance
@@ -183,9 +274,20 @@ export function cleanupSpeckles(grid, palette, options = {}) {
   for (let pass = 0; pass < maxPasses; pass += 1) {
     const regions = findConnectedRegions(nextGrid);
     const lookup = buildRegionLookup(regions);
+    const protectedRegionIds = buildProtectedDetailSet(
+      regions,
+      lookup,
+      nextGrid,
+      paletteMap,
+      minRegionSize,
+      options
+    );
 
     const smallRegion = minRegionSize > 0
-      ? regions.find((candidate) => candidate.cells.length < minRegionSize)
+      ? regions.find((candidate) => (
+        candidate.cells.length < minRegionSize &&
+        !protectedRegionIds.has(candidate.id)
+      ))
       : null;
 
     if (smallRegion) {
@@ -196,7 +298,7 @@ export function cleanupSpeckles(grid, palette, options = {}) {
     }
 
     const similarMerge = similarityThreshold > 0
-      ? bestSimilarMerge(regions, lookup, nextGrid, paletteMap, similarityThreshold)
+      ? bestSimilarMerge(regions, lookup, nextGrid, paletteMap, similarityThreshold, protectedRegionIds)
       : null;
     if (!similarMerge) break;
     for (const cell of similarMerge.source.cells) nextGrid[cell.y][cell.x] = similarMerge.target.color;
