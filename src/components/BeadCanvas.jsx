@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
+import { fitCanvasView, nextCanvasScale } from '../lib/canvasView';
 import { hexForPaletteValue } from '../lib/paletteValue';
 import { canvasPreviewClassName } from '../lib/previewModes';
 import { normalizeSelectionRect, pointInRect } from '../lib/selectionGrid';
@@ -44,6 +45,33 @@ export default function BeadCanvas({
   const displayedSelection = selectionPreviewRect ?? selectionRect;
   const displayedMoveRect = movedRect(selectionRect, selectionMoveDelta);
 
+  const fitToScreen = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const view = fitCanvasView({
+      rows,
+      cols,
+      cellSize,
+      viewportWidth: rect.width,
+      viewportHeight: rect.height,
+      padding: 48
+    });
+    setScale(view.scale);
+    setOffset(view.offset);
+  }, [cellSize, cols, rows]);
+
+  const resetActualSize = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setScale(1);
+    setOffset({
+      x: Math.round((rect.width - cols * cellSize) / 2),
+      y: Math.round((rect.height - rows * cellSize) / 2)
+    });
+  }, [cellSize, cols, rows]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' && !e.repeat) {
@@ -65,11 +93,19 @@ export default function BeadCanvas({
     };
   }, []);
 
+  useEffect(() => {
+    fitToScreen();
+  }, [fitToScreen]);
+
+  useEffect(() => {
+    window.addEventListener('resize', fitToScreen);
+    return () => window.removeEventListener('resize', fitToScreen);
+  }, [fitToScreen]);
+
   const handleWheel = useCallback((e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setScale(prev => Math.max(0.3, Math.min(5, prev + delta)));
+      setScale(prev => nextCanvasScale(prev, e.deltaY > 0 ? -1 : 1));
     }
   }, []);
 
@@ -209,6 +245,13 @@ export default function BeadCanvas({
       onMouseLeave={handleMouseUp}
       onContextMenu={handleContextMenu}
     >
+      <div className="canvas-view-controls" onMouseDown={(e) => e.stopPropagation()}>
+        <button type="button" title="缩小" onClick={() => setScale(prev => nextCanvasScale(prev, -1))}>-</button>
+        <span>{Math.round(scale * 100)}%</span>
+        <button type="button" title="放大" onClick={() => setScale(prev => nextCanvasScale(prev, 1))}>+</button>
+        <button type="button" title="实际大小" onClick={resetActualSize}>1:1</button>
+        <button type="button" title="适配画布" onClick={fitToScreen}>适配</button>
+      </div>
       <div
         className="canvas-container"
         style={{

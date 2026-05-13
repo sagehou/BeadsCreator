@@ -10,7 +10,10 @@ export default function BomPanel({
   onExportScaleChange,
   onPreviewModeChange,
   onExportPng,
-  onExportCsv
+  onExportCsv,
+  onExportProject,
+  onImportProjectFile,
+  projectStatus
 }) {
   const allColors = useMemo(() => getAllColors(), []);
   const beadCounts = useMemo(() => countBeads(grid, allColors), [grid, allColors]);
@@ -86,6 +89,27 @@ export default function BomPanel({
       <button className="bom-export-btn" style={{ marginTop: 6 }} onClick={onExportCsv}>
         📊 导出物料 CSV
       </button>
+
+      <div className="palette-section-title" style={{ marginTop: 12 }}>💾 项目文件</div>
+      <div className="project-file-actions">
+        <button className="bom-export-btn secondary" type="button" onClick={onExportProject}>
+          保存 .beads
+        </button>
+        <label className="bom-export-btn secondary project-import-label">
+          打开 .beads
+          <input
+            type="file"
+            accept=".beads,application/json"
+            onChange={(event) => {
+              onImportProjectFile?.(event.target.files?.[0] ?? null);
+              event.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+      {projectStatus && (
+        <div className="project-file-status">{projectStatus}</div>
+      )}
     </div>
   );
 }

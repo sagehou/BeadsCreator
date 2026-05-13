@@ -6,7 +6,7 @@ import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './data/colors';
-import { loadBoardState, saveBoardState } from './lib/boardPersistence';
+import { createProjectFile, loadBoardState, parseProjectFile, saveBoardState } from './lib/boardPersistence';
 import { mirrorGridHorizontal } from './lib/gridTransform';
 import { hexForPaletteValue } from './lib/paletteValue';
 import { PREVIEW_MODE_OPTIONS, PREVIEW_MODES, exportPreviewStyleForMode } from './lib/previewModes';
@@ -60,6 +60,7 @@ export default function App() {
   const [selectionMoveDelta, setSelectionMoveDelta] = useState(null);
   const [selectionClipboard, setSelectionClipboard] = useState(null);
   const [textDraft, setTextDraft] = useState(null);
+  const [projectStatus, setProjectStatus] = useState('');
 
   // Add color to recent
   const addRecent = useCallback((value) => {
@@ -398,6 +399,53 @@ export default function App() {
     link.click();
   }, [grid]);
 
+  const handleExportProject = useCallback(() => {
+    try {
+      const content = createProjectFile({
+        grid,
+        gridSize,
+        selectedColor,
+        recentColors
+      });
+      const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      const date = new Date().toISOString().slice(0, 10);
+      link.download = `beads_${grid[0]?.length ?? gridSize.cols}x${grid.length}_${date}.beads`;
+      link.href = objectUrl;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+      setProjectStatus('项目文件已保存');
+    } catch {
+      setProjectStatus('项目文件保存失败');
+    }
+  }, [grid, gridSize, recentColors, selectedColor]);
+
+  const handleImportProjectFile = useCallback(async (file) => {
+    if (!file) return;
+
+    try {
+      const imported = parseProjectFile(await file.text());
+      if (!imported) {
+        setProjectStatus('项目文件无法读取');
+        return;
+      }
+
+      setGridSize(imported.gridSize);
+      reset(imported.grid);
+      if (imported.selectedColor) setSelectedColor(imported.selectedColor);
+      setRecentColors(imported.recentColors ?? []);
+      setSelectionRect(null);
+      setSelectionPreviewRect(null);
+      setSelectionMoveDelta(null);
+      setSelectionClipboard(null);
+      setTextDraft(null);
+      setProjectStatus(`已打开 ${imported.gridSize.cols}×${imported.gridSize.rows} 项目`);
+    } catch {
+      setProjectStatus('项目文件无法读取');
+    }
+  }, [reset]);
+
   // Count total beads
   const totalBeads = useMemo(() => {
     let count = 0;
@@ -545,6 +593,9 @@ export default function App() {
           onPreviewModeChange={setPreviewMode}
           onExportPng={handleExportPng}
           onExportCsv={handleExportCsv}
+          onExportProject={handleExportProject}
+          onImportProjectFile={handleImportProjectFile}
+          projectStatus={projectStatus}
         />
       </div>
 
