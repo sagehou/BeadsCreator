@@ -585,3 +585,57 @@ input, select { font-family: inherit; }
 .cursor-pan { cursor: grab !important; }
 .cursor-pan:active { cursor: grabbing !important; }
 .cursor-pan .bead-cell { cursor: inherit !important; }
+
+@media (max-width: 720px) {
+  body {
+    overflow: auto;
+  }
+
+  #root {
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .app-logo {
+    width: 100%;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  .app-main {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .palette-panel,
+  .bom-panel {
+    width: 100%;
+    max-height: none;
+    border: 0;
+  }
+
+  .canvas-area {
+    min-height: 72vh;
+    flex: none;
+    padding: 24px 0;
+  }
+
+  .toolbar,
+  .header-controls {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .status-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 12px;
+  }
+}
