@@ -16,6 +16,22 @@ function symbolForIndex(index) {
   return String(index + 1);
 }
 
+function hexToRgb(hex) {
+  const normalized = String(hex).trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return [255, 255, 255];
+  return [
+    parseInt(normalized.slice(0, 2), 16),
+    parseInt(normalized.slice(2, 4), 16),
+    parseInt(normalized.slice(4, 6), 16)
+  ];
+}
+
+function textColorForHex(hex) {
+  const [r, g, b] = hexToRgb(hex);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#1f2937' : '#ffffff';
+}
+
 export function buildPrintLegend(grid, allColors = []) {
   const counts = new Map();
 
@@ -56,96 +72,208 @@ export function createPrintablePatternHtml({ grid, allColors = [], title = '拼�
   };
   const escapedTitle = escapeHtml(title);
   const generatedAt = new Date().toLocaleString('zh-CN');
+  const totalBeads = legend.reduce((sum, item) => sum + item.count, 0);
+  const patternColumns = `24px repeat(${cols}, minmax(0, 1fr))`;
 
-  const gridRows = grid.map((row, y) => `
-      <tr>
-        <th class="row-axis ${((y + 1) % 5 === 0) ? 'guide-5' : ''}">${y + 1}</th>
-        ${row.map((cell, x) => {
-    const item = cell ? colorResolver(cell) : null;
-    const coordinate = `${x + 1},${y + 1}`;
-    const guideClass = `${((x + 1) % 5 === 0) ? ' guide-5-col' : ''}${((y + 1) % 5 === 0) ? ' guide-5-row' : ''}`;
-    return `<td class="${item ? 'filled' : 'empty'}${guideClass}" data-coordinate="${coordinate}" style="${item ? `--bead-color:${escapeHtml(item.hex)}` : ''}">
-          <span class="cell-symbol">${item ? escapeHtml(item.symbol) : ''}</span>
-          <span class="cell-coordinate">${coordinate}</span>
-        </td>`;
-  }).join('')}
-      </tr>`).join('');
+  const columnHeaders = Array.from({ length: cols }, (_, x) => (
+    `<div class="axis-cell col-axis ${((x + 1) % 5 === 0) ? 'guide-5' : ''}">${x + 1}</div>`
+  )).join('');
 
-  const legendRows = legend.map((item) => `
-          <tr>
-            <td class="legend-symbol">${escapeHtml(item.symbol)}</td>
-            <td><span class="legend-dot" style="--bead-color:${escapeHtml(item.hex)}"></span></td>
-            <td>${escapeHtml(item.brand)}</td>
-            <td>${escapeHtml(item.code)}</td>
-            <td>${escapeHtml(item.name)}</td>
-            <td>${item.count}</td>
-          </tr>`).join('');
+  const patternRows = grid.map((row, y) => {
+    const rowHeader = `<div class="axis-cell row-axis ${((y + 1) % 5 === 0) ? 'guide-5' : ''}">${y + 1}</div>`;
+    const cells = row.map((cell, x) => {
+      const item = cell ? colorResolver(cell) : null;
+      const coordinate = `${x + 1},${y + 1}`;
+      const guideClass = `${((x + 1) % 5 === 0) ? ' guide-5-col' : ''}${((y + 1) % 5 === 0) ? ' guide-5-row' : ''}`;
+      const filledStyle = item
+        ? `--bead-color:${escapeHtml(item.hex)};--cell-text:${textColorForHex(item.hex)}`
+        : '';
+      return `<div class="pattern-cell ${item ? 'filled' : 'empty'}${guideClass}" data-coordinate="${coordinate}" style="${filledStyle}" title="${coordinate}">
+        <span class="cell-number">${item ? escapeHtml(item.symbol) : ''}</span>
+      </div>`;
+    }).join('');
+    return `${rowHeader}${cells}`;
+  }).join('');
 
-  const colHeaders = Array.from({ length: cols }, (_, index) => `<th class="${((index + 1) % 5 === 0) ? 'guide-5' : ''}">${index + 1}</th>`).join('');
+  const legendItems = legend.map((item) => {
+    const textColor = textColorForHex(item.hex);
+    return `<div class="legend-item">
+      <span class="legend-number" style="--bead-color:${escapeHtml(item.hex)};--cell-text:${textColor}">${escapeHtml(item.symbol)}</span>
+      <span class="legend-code">${escapeHtml(`${item.brand} ${item.code}`.trim())}</span>
+      <span class="legend-name">${escapeHtml(item.name)}</span>
+      <span class="legend-count">×${item.count}</span>
+    </div>`;
+  }).join('');
 
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapedTitle}</title>
   <style>
-    @page { margin: 10mm; }
+    @page { size: A4; margin: 10mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #2d2421; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
-    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; border-bottom: 2px solid #ded6cc; padding-bottom: 8px; }
+    body {
+      margin: 0;
+      background: #f3f4f6;
+      color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    .print-shell { min-height: 100vh; padding: 18px; }
+    .print-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 12mm;
+      background: #fff;
+      box-shadow: 0 16px 40px rgba(31, 41, 55, 0.16);
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #111827;
+    }
     h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
-    .meta { font-size: 12px; color: #6f625b; text-align: right; line-height: 1.55; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; }
-    table { border-collapse: collapse; }
-    .pattern { width: 100%; table-layout: fixed; }
-    .pattern th { height: 18px; background: #f5efe7; color: #6f625b; font-size: 7px; font-weight: 600; border: 1px solid #d6cec4; }
-    .pattern td { position: relative; aspect-ratio: 1; min-width: 14px; border: 1px solid #cfc7bd; background: #fff; text-align: center; overflow: hidden; }
-    .pattern th.guide-5 { background: #ece2d6; color: #3f342e; }
-    .pattern td.guide-5-col { border-right-color: #8f8276; border-right-width: 2px; }
-    .pattern td.guide-5-row { border-bottom-color: #8f8276; border-bottom-width: 2px; }
-    .pattern td.filled { background: var(--bead-color); }
-    .row-axis { width: 22px; }
-    .cell-symbol { position: absolute; inset: 2px 2px auto; font-size: 8px; line-height: 1; font-weight: 800; color: #111; text-shadow: 0 1px 2px rgba(255,255,255,.72); }
-    .cell-coordinate { position: absolute; inset: auto 1px 1px; font-size: 5px; line-height: 1; color: rgba(45,36,33,.62); }
-    .filled .cell-coordinate { color: rgba(255,255,255,.78); text-shadow: 0 1px 2px rgba(0,0,0,.52); }
-    .legend { width: 100%; font-size: 11px; }
-    .legend th, .legend td { padding: 5px 4px; border-bottom: 1px solid #e5ddd4; text-align: left; }
-    .legend th { color: #6f625b; font-weight: 700; }
-    .legend-symbol { width: 26px; font-weight: 800; text-align: center !important; }
-    .legend-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--bead-color); border: 1px solid rgba(0,0,0,.16); vertical-align: middle; }
-    .legend-title { margin: 0 0 8px; font-size: 15px; }
+    .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; color: #4b5563; font-size: 12px; }
+    .summary span { padding: 3px 8px; background: #f3f4f6; border-radius: 4px; }
+    .meta { color: #6b7280; font-size: 11px; line-height: 1.6; text-align: right; }
+    .pattern-wrap { margin-top: 12px; }
+    .pattern-grid {
+      display: grid;
+      grid-template-columns:${patternColumns};
+      border: 2px solid #111827;
+      background: #d1d5db;
+      gap: 1px;
+    }
+    .axis-corner, .axis-cell {
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f9fafb;
+      color: #4b5563;
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .axis-cell.guide-5 { background: #e5e7eb; color: #111827; }
+    .pattern-cell {
+      position: relative;
+      aspect-ratio: 1;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      overflow: hidden;
+    }
+    .pattern-cell.filled { background: var(--bead-color); }
+    .pattern-cell.guide-5-col { box-shadow: inset -2px 0 0 rgba(17, 24, 39, 0.32); }
+    .pattern-cell.guide-5-row { box-shadow: inset 0 -2px 0 rgba(17, 24, 39, 0.32); }
+    .pattern-cell.guide-5-col.guide-5-row { box-shadow: inset -2px 0 0 rgba(17, 24, 39, 0.32), inset 0 -2px 0 rgba(17, 24, 39, 0.32); }
+    .cell-number {
+      color: var(--cell-text, transparent);
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(6px, 1.45vw, 11px);
+      font-weight: 800;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,.28), 0 1px 2px rgba(255,255,255,.3);
+    }
+    .legend-section { margin-top: 12px; break-inside: avoid; }
+    .legend-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .legend-head h2 { margin: 0; font-size: 14px; }
+    .legend-total { color: #6b7280; font-size: 11px; }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px 10px;
+      font-size: 10px;
+    }
+    .legend-item {
+      display: grid;
+      grid-template-columns: 22px minmax(42px, auto) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      border-bottom: 1px dotted #d1d5db;
+      min-width: 0;
+    }
+    .legend-number {
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,.15);
+      background: var(--bead-color);
+      color: var(--cell-text);
+      font-weight: 800;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .legend-code { font-weight: 800; white-space: nowrap; }
+    .legend-name { color: #4b5563; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend-count { font-weight: 800; text-align: right; }
+    .print-tip { margin-top: 8px; color: #6b7280; font-size: 11px; }
+    .print-actions { margin-top: 14px; text-align: center; }
+    .print-button {
+      border: 0;
+      border-radius: 6px;
+      background: #111827;
+      color: white;
+      padding: 9px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
     @media print {
-      .layout { grid-template-columns: minmax(0, 1fr) 235px; }
-      .pattern td { min-width: 12px; }
+      html, body { background: white !important; }
+      .print-shell { padding: 0; }
+      .print-sheet { width: auto; min-height: auto; padding: 0; box-shadow: none; }
+      .pattern-grid { page-break-inside: avoid; }
+      .legend-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 9px; gap: 2px 8px; }
+      .print-actions { display: none !important; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>${escapedTitle}</h1>
-    </div>
-    <div class="meta">
-      尺寸：${cols} × ${rows}<br />
-      总数：${legend.reduce((sum, item) => sum + item.count, 0)} 颗<br />
-      生成：${escapeHtml(generatedAt)}
-    </div>
-  </header>
-  <main class="layout">
-    <table class="pattern" aria-label="拼豆坐标图纸">
-      <thead><tr><th></th>${colHeaders}</tr></thead>
-      <tbody>${gridRows}
-      </tbody>
-    </table>
-    <section>
-      <h2 class="legend-title">色号清单</h2>
-      <table class="legend">
-        <thead>
-          <tr><th>符号</th><th>颜色</th><th>品牌</th><th>色号</th><th>名称</th><th>数量</th></tr>
-        </thead>
-        <tbody>${legendRows}
-        </tbody>
-      </table>
+  <main class="print-shell">
+    <section class="print-sheet">
+      <header class="sheet-header">
+        <div>
+          <h1>${escapedTitle}</h1>
+          <div class="summary">
+            <span>尺寸：${cols} × ${rows}</span>
+            <span>总数：${totalBeads} 颗</span>
+            <span>共 ${legend.length} 色 · ${totalBeads} 颗</span>
+          </div>
+        </div>
+        <div class="meta">生成：${escapeHtml(generatedAt)}<br />每格数字对应下方色号</div>
+      </header>
+
+      <section class="pattern-wrap">
+        <div class="pattern-grid" aria-label="拼豆坐标图纸" style="grid-template-columns:${patternColumns}">
+          <div class="axis-corner"></div>${columnHeaders}${patternRows}
+        </div>
+      </section>
+
+      <section class="legend-section">
+        <div class="legend-head">
+          <h2>色号清单</h2>
+          <div class="legend-total">共 ${legend.length} 色 · ${totalBeads} 颗</div>
+        </div>
+        <div class="legend-grid">${legendItems || '<div class="legend-item">画布为空</div>'}</div>
+        <div class="print-tip">每格内数字对应色号清单；上方和左侧为行列坐标，粗线为每 5 格辅助线。</div>
+      </section>
+
+      <div class="print-actions">
+        <button class="print-button" type="button" onclick="window.print()">打印 / 另存为 PDF</button>
+      </div>
     </section>
   </main>
 </body>

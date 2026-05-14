@@ -56,11 +56,36 @@ test('createPrintablePatternHtml includes coordinates, legend, and escaped text'
   assert.match(html, /总数：3 颗/);
   assert.match(html, /aria-label="拼豆坐标图纸"/);
   assert.match(html, /色号清单/);
-  assert.match(html, /<th>符号<\/th><th>颜色<\/th><th>品牌<\/th><th>色号<\/th><th>名称<\/th><th>数量<\/th>/);
-  assert.match(html, />MARD<\/td>\s*<td>A1<\/td>/);
-  assert.match(html, />2<\/td>/);
+  assert.match(html, /class="pattern-cell filled/);
+  assert.match(html, /class="cell-number">1<\/span>/);
+  assert.match(html, /class="legend-grid"/);
+  assert.match(html, /class="legend-item"/);
+  assert.match(html, /打印 \/ 另存为 PDF/);
+  assert.match(html, /MARD A1/);
+  assert.match(html, /×2/);
   assert.match(html, /黑色&lt;script&gt;/);
   assert.doesNotMatch(html, /黑色<script>/);
   assert.match(html, /guide-5/);
   assert.doesNotMatch(html, /\{cols\}|\{legend\.reduce|\{escapeHtml/);
+});
+
+test('createPrintablePatternHtml uses a print-focused A4 sheet with compact legend', () => {
+  const grid = Array.from({ length: 6 }, (_, y) => (
+    Array.from({ length: 6 }, (_, x) => ((x + y) % 2 === 0 ? 'MARD:A1' : 'MARD:B2'))
+  ));
+
+  const html = createPrintablePatternHtml({
+    grid,
+    allColors: palette,
+    title: '拼豆图纸'
+  });
+
+  assert.match(html, /@page \{ size: A4; margin: 10mm; \}/);
+  assert.match(html, /class="print-sheet"/);
+  assert.match(html, /class="pattern-grid"/);
+  assert.match(html, /grid-template-columns:24px repeat\(6, minmax\(0, 1fr\)\)/);
+  assert.match(html, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(html, /data-coordinate="5,5"/);
+  assert.match(html, /共 2 色 · 36 颗/);
+  assert.match(html, /window\.print\(\)/);
 });
