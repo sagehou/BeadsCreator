@@ -58,3 +58,7 @@ test('suggestBoardSizeForComplexity recommends larger boards only when detail ne
   assert.equal(suggestBoardSizeForComplexity(82, 50), 58);
   assert.equal(suggestBoardSizeForComplexity(90, 58), null);
 });
+
+test('suggestBoardSizeForComplexity respects an explicit maximum board size', () => {
+  assert.equal(suggestBoardSizeForComplexity(82, 50, { maxBoardSize: 50 }), null);
+});

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
-import { estimateImageComplexity, suggestBoardSizeForComplexity } from '../lib/imageBackground';
 import { calculateSourceCrop } from '../lib/imageCrop';
 import { createImageConversionRequest, hasTargetSizeChanged } from '../lib/imageConversionRequest';
 import { IMAGE_IMPORT_PRESETS, imageImportPresetOptions } from '../lib/imageImportPresets';
@@ -9,8 +8,23 @@ const paletteColors = MARD_COLORS;
 const maxColors = 16;
 const enhanceEdges = false;
 
-export default function ImageConverter({ gridRows, gridCols, onConvert }) {
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 4v11" />
+      <path d="M8 8l4-4 4 4" />
+      <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" />
+    </svg>
+  );
+}
+
+function isFileDrag(event) {
+  return Array.from(event.dataTransfer?.types ?? []).includes('Files');
+}
+
+export default function ImageConverter({ gridRows, gridCols, onConvert, compact = false }) {
   const [dragOver, setDragOver] = useState(false);
+  const [pageDragOver, setPageDragOver] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importPreset, setImportPreset] = useState('portrait');
@@ -23,7 +37,6 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [outlineWidth, setOutlineWidth] = useState(1);
   const [removeBackground, setRemoveBackground] = useState(imageImportPresetOptions('portrait').removeBackground);
   const [colorLimit, setColorLimit] = useState(imageImportPresetOptions('portrait').colorLimit);
-  const [sizeSuggestion, setSizeSuggestion] = useState(null);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
   const sourceRef = useRef(null);
@@ -160,8 +173,6 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         width: imageData.width,
         height: imageData.height
       };
-      const complexity = estimateImageComplexity(source);
-      setSizeSuggestion(suggestBoardSizeForComplexity(complexity, Math.max(gridRows, gridCols)));
       sourceRef.current = source;
       runConversion(source, { rows: gridRows, cols: gridCols });
     };
@@ -196,16 +207,49 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleWindowDragOver = (event) => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      setPageDragOver(true);
+    };
+    const handleWindowDragLeave = (event) => {
+      if (
+        event.clientX > 0 &&
+        event.clientY > 0 &&
+        event.clientX < window.innerWidth &&
+        event.clientY < window.innerHeight
+      ) {
+        return;
+      }
+      setPageDragOver(false);
+    };
+    const handleWindowDrop = (event) => {
+      if (!isFileDrag(event)) return;
+      event.preventDefault();
+      setPageDragOver(false);
+      processImage(event.dataTransfer.files?.[0]);
+    };
+
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('drop', handleWindowDrop);
+    return () => {
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, [processImage]);
+
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    processImage(file);
+    processImage(e.dataTransfer.files[0]);
   }, [processImage]);
 
   const handleFileSelect = useCallback((e) => {
-    const file = e.target.files[0];
-    processImage(file);
+    processImage(e.target.files[0]);
+    e.target.value = '';
   }, [processImage]);
 
   const handlePresetChange = useCallback((presetId) => {
@@ -222,6 +266,43 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     setCropOffsetY(0);
   }, []);
 
+  const hiddenInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      style={{ display: 'none' }}
+      onChange={handleFileSelect}
+    />
+  );
+
+  if (compact) {
+    return (
+      <>
+        <div className="toolbar-import">
+          <button
+            className={`tool-btn import-tool-btn ${processing ? 'processing' : ''}`}
+            type="button"
+            title="导入图片"
+            aria-label="导入图片"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <UploadIcon />
+          </button>
+          {hiddenInput}
+          {processing && (
+            <div className="toolbar-import-progress" style={{ width: `${progress}%` }} />
+          )}
+        </div>
+        {pageDragOver && (
+          <div className="page-drop-overlay">
+            <div>松开导入图片</div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="image-converter-card">
       <div className="palette-section-title">导入图片</div>
@@ -235,13 +316,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       >
         <div className="upload-icon">🖼️</div>
         <div>点击或拖拽图片生成图纸</div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleFileSelect}
-        />
+        {hiddenInput}
       </div>
 
       <div className="upload-options">
@@ -365,12 +440,6 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
           </div>
         )}
       </div>
-
-      {sizeSuggestion && (
-        <div className="import-suggestion">
-          细节较多，建议使用 {sizeSuggestion}×{sizeSuggestion} 或更大画板保留五官和轮廓。
-        </div>
-      )}
 
       {processing && (
         <div className="progress-bar">

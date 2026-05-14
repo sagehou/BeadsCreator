@@ -77,6 +77,13 @@ test('canvasPreviewClassName combines grid and validated preview classes', () =>
   );
 });
 
+test('canvasPreviewClassName keeps towel mode distinguishable on the canvas', () => {
+  assert.equal(
+    canvasPreviewClassName(true, PREVIEW_MODES.TOWEL),
+    'bead-canvas show-grid preview-towel'
+  );
+});
+
 test('cloneGridForPreview does not mutate source grid', () => {
   const grid = [['#000000']];
   const preview = cloneGridForPreview(grid);

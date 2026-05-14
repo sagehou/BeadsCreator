@@ -110,6 +110,7 @@ function ToolbarButton({ active, disabled, label, icon, onClick }) {
 }
 
 export default function Toolbar({
+  leadingContent,
   activeTool,
   onToolChange,
   onUndo,
@@ -124,6 +125,7 @@ export default function Toolbar({
 }) {
   return (
     <div className="toolbar">
+      {leadingContent}
       {EDITOR_TOOLS.map((tool) => (
         <ToolbarButton
           key={tool.id}

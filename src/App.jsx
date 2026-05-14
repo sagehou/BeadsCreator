@@ -6,6 +6,7 @@ import BomPanel from './components/BomPanel';
 import ImageConverter from './components/ImageConverter';
 import { useHistory, cloneGrid, floodFill, createEmptyGrid, countBeads } from './hooks/useBeadBoard';
 import { DEFAULT_SELECTED_COLOR, generateSmileyPattern, getAllColors } from './data/colors';
+import { MAX_BOARD_SIZE, MIN_BOARD_SIZE, clampBoardSize } from './lib/boardSize';
 import { createProjectFile, loadBoardState, parseProjectFile, saveBoardState } from './lib/boardPersistence';
 import { mirrorGridHorizontal } from './lib/gridTransform';
 import { hexForPaletteValue } from './lib/paletteValue';
@@ -289,8 +290,8 @@ export default function App() {
 
   // Resize grid
   const handleResize = useCallback((newRows, newCols) => {
-    newRows = Math.max(10, Math.min(50, newRows));
-    newCols = Math.max(10, Math.min(50, newCols));
+    newRows = clampBoardSize(newRows);
+    newCols = clampBoardSize(newCols);
     const newGrid = createEmptyGrid(newRows, newCols);
     // Copy existing data
     for (let y = 0; y < Math.min(grid.length, newRows); y++) {
@@ -487,6 +488,14 @@ export default function App() {
         </div>
 
         <Toolbar
+          leadingContent={(
+            <ImageConverter
+              compact
+              gridRows={gridSize.rows}
+              gridCols={gridSize.cols}
+              onConvert={handleImageConvert}
+            />
+          )}
           activeTool={activeTool}
           onToolChange={handleToolChange}
           onUndo={undo}
@@ -505,8 +514,8 @@ export default function App() {
             <input
               className="size-input"
               type="number"
-              min="10"
-              max="50"
+              min={MIN_BOARD_SIZE}
+              max={MAX_BOARD_SIZE}
               value={gridSize.cols}
               onChange={(e) => handleResize(gridSize.rows, Number(e.target.value))}
             />
@@ -514,8 +523,8 @@ export default function App() {
             <input
               className="size-input"
               type="number"
-              min="10"
-              max="50"
+              min={MIN_BOARD_SIZE}
+              max={MAX_BOARD_SIZE}
               value={gridSize.rows}
               onChange={(e) => handleResize(Number(e.target.value), gridSize.cols)}
             />
@@ -530,18 +539,11 @@ export default function App() {
       <div className="app-main">
         {/* Left: Image Converter + Palette */}
         <div className="palette-panel">
-          <ImageConverter
-            gridRows={gridSize.rows}
-            gridCols={gridSize.cols}
-            onConvert={handleImageConvert}
+          <ColorPalette
+            selectedColor={selectedColor}
+            onSelectColor={handleSelectColor}
+            recentColors={recentColors}
           />
-          <div className="palette-divider">
-            <ColorPalette
-              selectedColor={selectedColor}
-              onSelectColor={handleSelectColor}
-              recentColors={recentColors}
-            />
-          </div>
         </div>
 
         {/* Center: Canvas */}

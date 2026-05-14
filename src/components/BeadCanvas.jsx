@@ -281,7 +281,7 @@ export default function BeadCanvas({
                 <div
                   key={`${x}-${y}`}
                   className={classNames}
-                  style={{ backgroundColor: cellHex || 'transparent' }}
+                  style={{ '--bead-color': cellHex || 'transparent' }}
                   onMouseDown={(e) => handleCellMouseDown(x, y, e)}
                   onMouseEnter={() => handleCellMouseEnter(x, y)}
                   onTouchStart={() => handleTouchStart(x, y)}

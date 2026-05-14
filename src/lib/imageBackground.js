@@ -171,9 +171,11 @@ export function estimateImageComplexity({ imageData, width, height, sampleSize =
   return count > 0 ? total / count : 0;
 }
 
-export function suggestBoardSizeForComplexity(complexity, currentSize) {
-  if (currentSize >= 58) return null;
-  if (complexity > 70 && currentSize < 58) return 58;
-  if (complexity > 40 && currentSize < 50) return 50;
+export function suggestBoardSizeForComplexity(complexity, currentSize, options = {}) {
+  const maxBoardSize = Math.max(1, Number(options.maxBoardSize ?? 58));
+  if (currentSize >= maxBoardSize) return null;
+
+  if (complexity > 70 && currentSize < 58 && maxBoardSize >= 58) return 58;
+  if (complexity > 40 && currentSize < 50 && maxBoardSize >= 50) return 50;
   return null;
 }
