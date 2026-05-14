@@ -683,6 +683,16 @@ input, select { font-family: inherit; }
   font-size: 0.78rem;
 }
 .upload-option label { color: var(--text-secondary); }
+.import-suggestion {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 176, 0, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 248, 220, 0.8);
+  color: #7a4b00;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
 .compact-select {
   flex: 1;
   min-width: 0;

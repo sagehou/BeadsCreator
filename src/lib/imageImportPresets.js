@@ -3,6 +3,8 @@ export const IMAGE_IMPORT_PRESETS = {
     id: 'portrait',
     label: '头像',
     cleanupThreshold: 1,
+    removeBackground: false,
+    colorLimit: 18,
     bucketSize: 14,
     preprocessMode: 'cartoon',
     preprocessOptions: {
@@ -20,6 +22,8 @@ export const IMAGE_IMPORT_PRESETS = {
     id: 'photo',
     label: '照片',
     cleanupThreshold: 2,
+    removeBackground: false,
+    colorLimit: 24,
     bucketSize: 16,
     preprocessMode: 'cartoon',
     preprocessOptions: {
@@ -37,6 +41,8 @@ export const IMAGE_IMPORT_PRESETS = {
     id: 'icon',
     label: '图标',
     cleanupThreshold: 0,
+    removeBackground: true,
+    colorLimit: 12,
     bucketSize: 8,
     preprocessMode: 'cartoon',
     preprocessOptions: {
@@ -54,6 +60,8 @@ export const IMAGE_IMPORT_PRESETS = {
     id: 'lineArt',
     label: '线稿',
     cleanupThreshold: 0,
+    removeBackground: true,
+    colorLimit: 8,
     bucketSize: 6,
     preprocessMode: 'cartoon',
     preprocessOptions: {
@@ -71,6 +79,8 @@ export const IMAGE_IMPORT_PRESETS = {
     id: 'pixel',
     label: '像素画',
     cleanupThreshold: 0,
+    removeBackground: false,
+    colorLimit: 0,
     bucketSize: 1,
     preprocessMode: 'none',
     preprocessOptions: {}

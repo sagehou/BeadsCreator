@@ -59,11 +59,12 @@ export function createPrintablePatternHtml({ grid, allColors = [], title = 'ๆผ่
 
   const gridRows = grid.map((row, y) => `
       <tr>
-        <th class="row-axis">${y + 1}</th>
+        <th class="row-axis ${((y + 1) % 5 === 0) ? 'guide-5' : ''}">${y + 1}</th>
         ${row.map((cell, x) => {
     const item = cell ? colorResolver(cell) : null;
     const coordinate = `${x + 1},${y + 1}`;
-    return `<td class="${item ? 'filled' : 'empty'}" data-coordinate="${coordinate}" style="${item ? `--bead-color:${escapeHtml(item.hex)}` : ''}">
+    const guideClass = `${((x + 1) % 5 === 0) ? ' guide-5-col' : ''}${((y + 1) % 5 === 0) ? ' guide-5-row' : ''}`;
+    return `<td class="${item ? 'filled' : 'empty'}${guideClass}" data-coordinate="${coordinate}" style="${item ? `--bead-color:${escapeHtml(item.hex)}` : ''}">
           <span class="cell-symbol">${item ? escapeHtml(item.symbol) : ''}</span>
           <span class="cell-coordinate">${coordinate}</span>
         </td>`;
@@ -80,7 +81,7 @@ export function createPrintablePatternHtml({ grid, allColors = [], title = 'ๆผ่
             <td>${item.count}</td>
           </tr>`).join('');
 
-  const colHeaders = Array.from({ length: cols }, (_, index) => `<th>${index + 1}</th>`).join('');
+  const colHeaders = Array.from({ length: cols }, (_, index) => `<th class="${((index + 1) % 5 === 0) ? 'guide-5' : ''}">${index + 1}</th>`).join('');
 
   return `<!doctype html>
 <html lang="zh-CN">
@@ -99,6 +100,9 @@ export function createPrintablePatternHtml({ grid, allColors = [], title = 'ๆผ่
     .pattern { width: 100%; table-layout: fixed; }
     .pattern th { height: 18px; background: #f5efe7; color: #6f625b; font-size: 7px; font-weight: 600; border: 1px solid #d6cec4; }
     .pattern td { position: relative; aspect-ratio: 1; min-width: 14px; border: 1px solid #cfc7bd; background: #fff; text-align: center; overflow: hidden; }
+    .pattern th.guide-5 { background: #ece2d6; color: #3f342e; }
+    .pattern td.guide-5-col { border-right-color: #8f8276; border-right-width: 2px; }
+    .pattern td.guide-5-row { border-bottom-color: #8f8276; border-bottom-width: 2px; }
     .pattern td.filled { background: var(--bead-color); }
     .row-axis { width: 22px; }
     .cell-symbol { position: absolute; inset: 2px 2px auto; font-size: 8px; line-height: 1; font-weight: 800; color: #111; text-shadow: 0 1px 2px rgba(255,255,255,.72); }

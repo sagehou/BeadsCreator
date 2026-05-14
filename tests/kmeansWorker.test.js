@@ -127,6 +127,67 @@ test('worker applies an outline after converting the image to a bead grid', asyn
   });
 });
 
+test('worker removes edge-connected background before dominant sampling', async () => {
+  const worker = await loadWorker();
+  const messages = worker.post({
+    imageData: imageDataFromPixels([
+      [255, 255, 255], [255, 255, 255], [255, 255, 255],
+      [255, 255, 255], [255, 0, 0], [255, 255, 255],
+      [255, 255, 255], [255, 255, 255], [255, 255, 255]
+    ]),
+    sourceWidth: 3,
+    sourceHeight: 3,
+    width: 3,
+    height: 3,
+    paletteColors: palette,
+    cleanupThreshold: 0,
+    bucketSize: 1,
+    preprocessMode: 'none',
+    removeBackground: true
+  });
+
+  assert.deepEqual(messages.at(-1), {
+    type: 'complete',
+    resultGrid: [
+      [null, null, null],
+      [null, '#FF0000', null],
+      [null, null, null]
+    ],
+    width: 3,
+    height: 3
+  });
+});
+
+test('worker limits generated grids to the requested number of colors', async () => {
+  const localPalette = [
+    normalizePaletteColor({ brand: 'MARD', code: 'BLACK', name: 'Black', hex: '#000000' }),
+    normalizePaletteColor({ brand: 'MARD', code: 'NEAR-BLACK', name: 'Near Black', hex: '#101010' }),
+    normalizePaletteColor({ brand: 'MARD', code: 'RED', name: 'Red', hex: '#FF0000' }),
+    normalizePaletteColor({ brand: 'MARD', code: 'NEAR-RED', name: 'Near Red', hex: '#FF2020' })
+  ];
+  const worker = await loadWorker();
+  const messages = worker.post({
+    imageData: imageDataFromPixels([
+      [0, 0, 0], [0, 0, 0], [255, 0, 0],
+      [0, 0, 0], [16, 16, 16], [255, 32, 32]
+    ]),
+    sourceWidth: 3,
+    sourceHeight: 2,
+    width: 3,
+    height: 2,
+    paletteColors: localPalette,
+    cleanupThreshold: 0,
+    bucketSize: 1,
+    preprocessMode: 'none',
+    colorLimit: 2
+  });
+
+  assert.deepEqual(messages.at(-1).resultGrid, [
+    ['#000000', '#000000', '#FF0000'],
+    ['#000000', '#000000', '#FF0000']
+  ]);
+});
+
 test('worker supports legacy paletteHexColors input with palette index result output', async () => {
   const worker = await loadWorker();
   const messages = worker.post({

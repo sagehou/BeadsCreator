@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { MARD_COLORS } from '../data/colors';
+import { estimateImageComplexity, suggestBoardSizeForComplexity } from '../lib/imageBackground';
 import { calculateSourceCrop } from '../lib/imageCrop';
 import { createImageConversionRequest, hasTargetSizeChanged } from '../lib/imageConversionRequest';
 import { IMAGE_IMPORT_PRESETS, imageImportPresetOptions } from '../lib/imageImportPresets';
@@ -20,6 +21,9 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
   const [outlineMode, setOutlineMode] = useState('none');
   const [outlineColor, setOutlineColor] = useState('#000000');
   const [outlineWidth, setOutlineWidth] = useState(1);
+  const [removeBackground, setRemoveBackground] = useState(imageImportPresetOptions('portrait').removeBackground);
+  const [colorLimit, setColorLimit] = useState(imageImportPresetOptions('portrait').colorLimit);
+  const [sizeSuggestion, setSizeSuggestion] = useState(null);
   const fileInputRef = useRef(null);
   const workerRef = useRef(null);
   const sourceRef = useRef(null);
@@ -33,7 +37,9 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     cropOffsetY,
     outlineMode,
     outlineColor,
-    outlineWidth
+    outlineWidth,
+    removeBackground,
+    colorLimit
   ].join('|');
   const lastOptionsSignatureRef = useRef(optionsSignature);
   const jobIdRef = useRef(0);
@@ -111,8 +117,11 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
       outlineMode,
       outlineColor,
       outlineWidth,
+      removeBackground,
+      colorLimit
     }));
   }, [
+    colorLimit,
     cleanupThreshold,
     cropOffsetX,
     cropOffsetY,
@@ -122,6 +131,7 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     outlineColor,
     outlineMode,
     outlineWidth,
+    removeBackground,
     presetOptions
   ]);
 
@@ -150,6 +160,8 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
         width: imageData.width,
         height: imageData.height
       };
+      const complexity = estimateImageComplexity(source);
+      setSizeSuggestion(suggestBoardSizeForComplexity(complexity, Math.max(gridRows, gridCols)));
       sourceRef.current = source;
       runConversion(source, { rows: gridRows, cols: gridCols });
     };
@@ -200,6 +212,8 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
     const nextPreset = imageImportPresetOptions(presetId);
     setImportPreset(nextPreset.id);
     setCleanupThreshold(nextPreset.cleanupThreshold);
+    setRemoveBackground(nextPreset.removeBackground);
+    setColorLimit(nextPreset.colorLimit);
   }, []);
 
   const resetCrop = useCallback(() => {
@@ -292,6 +306,26 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
           <span style={{ fontSize: '0.78rem', minWidth: 22, textAlign: 'right' }}>{cleanupThreshold}</span>
         </div>
         <div className="upload-option">
+          <label>去背景</label>
+          <input
+            type="checkbox"
+            checked={removeBackground}
+            onChange={(e) => setRemoveBackground(e.target.checked)}
+          />
+        </div>
+        <div className="upload-option">
+          <label>颜色上限</label>
+          <input
+            type="range"
+            min="0"
+            max="32"
+            value={colorLimit}
+            onChange={(e) => setColorLimit(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <span style={{ fontSize: '0.78rem', minWidth: 34, textAlign: 'right' }}>{colorLimit || '不限'}</span>
+        </div>
+        <div className="upload-option">
           <label>描边</label>
           <select
             value={outlineMode}
@@ -331,6 +365,12 @@ export default function ImageConverter({ gridRows, gridCols, onConvert }) {
           </div>
         )}
       </div>
+
+      {sizeSuggestion && (
+        <div className="import-suggestion">
+          细节较多，建议使用 {sizeSuggestion}×{sizeSuggestion} 或更大画板保留五官和轮廓。
+        </div>
+      )}
 
       {processing && (
         <div className="progress-bar">

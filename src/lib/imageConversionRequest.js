@@ -16,7 +16,9 @@ export function createImageConversionRequest({
   sourceCrop = null,
   outlineMode = 'none',
   outlineColor = '#000000',
-  outlineWidth = 1
+  outlineWidth = 1,
+  removeBackground = false,
+  colorLimit = 0
 }) {
   return {
     imageData: source.imageData,
@@ -34,6 +36,8 @@ export function createImageConversionRequest({
     sourceCrop,
     outlineMode,
     outlineColor,
-    outlineWidth
+    outlineWidth,
+    removeBackground,
+    colorLimit
   };
 }

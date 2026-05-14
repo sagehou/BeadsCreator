@@ -61,5 +61,6 @@ test('createPrintablePatternHtml includes coordinates, legend, and escaped text'
   assert.match(html, />2<\/td>/);
   assert.match(html, /黑色&lt;script&gt;/);
   assert.doesNotMatch(html, /黑色<script>/);
+  assert.match(html, /guide-5/);
   assert.doesNotMatch(html, /\{cols\}|\{legend\.reduce|\{escapeHtml/);
 });

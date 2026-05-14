@@ -1,6 +1,8 @@
 import { imageDataToDominantGrid } from '../lib/dominantSampling.js';
 import { cleanupSpeckles } from '../lib/gridCleanup.js';
 import { applyOutlineToGrid } from '../lib/gridEffects.js';
+import { limitGridToTopColors } from '../lib/gridPaletteLimit.js';
+import { removeBackgroundFromImageData } from '../lib/imageBackground.js';
 import { stylizeImageForBeads } from '../lib/imagePreprocess.js';
 
 function colorDistSq(a, b) {
@@ -211,7 +213,9 @@ self.onmessage = function (e) {
     sourceCrop = null,
     outlineMode = 'none',
     outlineColor = '#000000',
-    outlineWidth = 1
+    outlineWidth = 1,
+    removeBackground = false,
+    colorLimit = 0
   } = e.data;
 
   try {
@@ -242,10 +246,17 @@ self.onmessage = function (e) {
 
     const actualSourceWidth = sourceWidth ?? width;
     const actualSourceHeight = sourceHeight ?? height;
-    const preparedImageData = preprocessMode === 'none'
-      ? imageData
-      : stylizeImageForBeads({
+    const backgroundRemovedImageData = removeBackground
+      ? removeBackgroundFromImageData({
         imageData,
+        width: actualSourceWidth,
+        height: actualSourceHeight
+      }) ?? imageData
+      : imageData;
+    const preparedImageData = preprocessMode === 'none'
+      ? backgroundRemovedImageData
+      : stylizeImageForBeads({
+        imageData: backgroundRemovedImageData,
         width: actualSourceWidth,
         height: actualSourceHeight,
         smoothingRadius: 1,
@@ -279,7 +290,10 @@ self.onmessage = function (e) {
         similarityThreshold: 12 + cleanupLevel * 10
       })
       : grid;
-    const resultGrid = applyOutlineToGrid(cleanedGrid, {
+    const limitedGrid = colorLimit > 0
+      ? limitGridToTopColors(cleanedGrid, paletteColors, colorLimit)
+      : cleanedGrid;
+    const resultGrid = applyOutlineToGrid(limitedGrid, {
       mode: outlineMode,
       color: outlineColor,
       width: outlineWidth
