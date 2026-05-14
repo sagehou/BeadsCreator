@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  STARTER_EMOJIS,
   STARTER_PATTERN_NAMES,
   generateStarterPattern
 } from '../src/lib/starterPatterns.js';
@@ -33,9 +34,10 @@ test('all named starter patterns can render at default size', () => {
 
 test('starter patterns are curated expression faces', () => {
   assert.deepEqual(
-    STARTER_PATTERN_NAMES,
-    ['happy', 'wink', 'heart-eyes', 'cool', 'sleepy', 'blush']
+    STARTER_EMOJIS,
+    ['😉', '😎', '😘', '🤣', '👍', '😋', '😜', '🤓', '🐻', '🐧']
   );
+  assert.equal(STARTER_PATTERN_NAMES.length, STARTER_EMOJIS.length);
 });
 
 test('starter pattern colors are all present in the MARD palette', () => {
